@@ -11,7 +11,7 @@ const apiKeys = [
 
 async function getAIResponse(prompt) {
   const payload = {
-    model: "deepseek/deepseek-r1-zero:free",
+    model: "google/gemini-2.5-pro-exp-03-25:free",
     messages: [{ role: "user", content: prompt }],
   };
   
@@ -37,9 +37,9 @@ async function getAIResponse(prompt) {
         response.data.choices[0].message &&
         response.data.choices[0].message.content
       ) {
-        console.log(response)
+        // console.log(response)
         const aiOutput = response.data.choices[0].message.content.trim();
-        console.log(`Key index ${i} succeeded: `, aiOutput);
+        // console.log(aiOutput);
         return aiOutput;
       } else {
         console.error("Unexpected response structure with key index", i, response.data);

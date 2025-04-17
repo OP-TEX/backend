@@ -1,4 +1,16 @@
 const jwt = require('jsonwebtoken');
+const UserModel = require('../models/userModel');
+const DeliveryManModel = require('../models/deliveryManModel');
+const CustomerServiceModel = require('../models/customerServiceModel');
+const AdminModel = require('../models/adminModel');
+
+// Map models to role names
+const models = {
+  User: { model: UserModel, role: 'customer' },
+  DeliveryMan: { model: DeliveryManModel, role: 'delivery' },
+  CustomerService: { model: CustomerServiceModel, role: 'customer service' },
+  Admin: { model: AdminModel, role: 'admin' }
+};
 
 const authMiddleware = async (req, res, next) => {
   try {
@@ -13,8 +25,36 @@ const authMiddleware = async (req, res, next) => {
 
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const userId = decoded.id;
+      
+      // Find the user in all possible models
+      let userData = null;
+      let userRole = null;
+      
+      for (const [modelName, { model, role }] of Object.entries(models)) {
+        const user = await model.findById(userId);
+        if (user) {
+          // Convert to plain object and remove sensitive fields
+          userData = user.toObject();
+          delete userData.hashedPassword;
+          delete userData.confirmationToken;
+          delete userData.otp;
+          userRole = role;
+          break;
+        }
+      }
+      
+      if (!userData) {
+        return res.status(404).json({
+          status: '40400',
+          message: 'User not found'
+        });
+      }
+      
+      // Set complete user data with role in req.user
       req.user = {
-        id: decoded.id
+        ...userData,
+        role: userRole
       };
       
       next();
