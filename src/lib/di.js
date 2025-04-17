@@ -8,6 +8,8 @@ const AuthService = require('../services/authServices');
 const AuthController = require('../controllers/authControllers');
 const AdminService = require('../services/adminServices');
 const AdminController = require('../controllers/adminControllers');
+const ProductService = require('../services/productServices');
+const ProductController = require('../controllers/productControllers');
 
 // Connect to MongoDB
 connectDB();
@@ -21,10 +23,18 @@ const models = {
   product: ProductModel
 };
 
+// Create instances
 const authService = new AuthService(models);
 const authController = new AuthController(authService);
 
 const adminService = new AdminService(models);
 const adminController = new AdminController(adminService);
 
-module.exports = { authController, adminController };
+const productService = new ProductService(models);
+const productController = new ProductController(productService);
+
+module.exports = { 
+  authController, 
+  adminController,
+  productController
+};
