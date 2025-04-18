@@ -4,6 +4,7 @@ const DeliveryManModel = require('../models/deliveryManModel');
 const CustomerServiceModel = require('../models/customerServiceModel');
 const AdminModel = require('../models/adminModel');
 const ProductModel = require('../models/productModel');
+const OrderModel = require('../models/orderModel');
 const AuthService = require('../services/authServices');
 const AuthController = require('../controllers/authControllers');
 const AdminService = require('../services/adminServices');
@@ -20,7 +21,8 @@ const models = {
   delivery: DeliveryManModel,
   'customer service': CustomerServiceModel,
   admin: AdminModel,
-  product: ProductModel
+  product: ProductModel,
+  order: OrderModel,
 };
 
 // Create instances
