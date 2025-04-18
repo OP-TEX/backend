@@ -2,6 +2,13 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { sendMail } = require('../lib/mail');
+const { 
+  ConflictError, 
+  ValidationError, 
+  NotFoundError, 
+  AuthorizationError,
+  BadRequestError
+} = require('../utils/baseException');
 
 class AuthService {
   constructor(models) {
@@ -11,23 +18,27 @@ class AuthService {
   async register({ firstName, lastName, email, phone, password, role }) {
     const existing = await this.getUserByEmail(email);
     if (existing) {
-      throw new Error("Email is already in use");
+      throw new ConflictError("Email is already in use", "EMAIL_ALREADY_IN_USE");
     }
   
     const normalizedRole = role.toLowerCase();
     const Model = this.models[normalizedRole];
     if (!Model) {
-      throw new Error("Invalid role provided");
+      throw new ValidationError("Invalid role provided", [{ field: "role", message: "Role is invalid" }]);
     }
   
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{6,}$/;
     if (!passwordRegex.test(password)) {
-      throw new Error("Password must be at least 6 characters long and include an uppercase letter, a lowercase letter, a number, and a special character.");
+      throw new ValidationError("Password validation failed", [
+        { field: "password", message: "Password must be at least 6 characters long and include an uppercase letter, a lowercase letter, a number, and a special character." }
+      ]);
     }
   
     const phoneRegex = /^(010|011|012|015)\d{8}$/;
     if (!phoneRegex.test(phone)) {
-      throw new Error("Phone number must begin with 010, 011, 012, or 015 and be followed by exactly 8 digits.");
+      throw new ValidationError("Phone validation failed", [
+        { field: "phone", message: "Phone number must begin with 010, 011, 012, or 015 and be followed by exactly 8 digits." }
+      ]);
     }
   
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -66,7 +77,7 @@ class AuthService {
 
   async sendConfirmationEmail(email) {
     const result = await this.getUserByEmail(email);
-    if (!result) throw new Error("User not found");
+    if (!result) throw new NotFoundError("User not found", "USER_NOT_FOUND");
     const { user } = result;
     
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -96,34 +107,33 @@ class AuthService {
   }
   
   async confirmEmail({ email, token, otp }) {
-
     const result = await this.getUserByEmail(email);
-    if (!result) throw new Error("User not found");
+    if (!result) throw new NotFoundError("User not found", "USER_NOT_FOUND");
     const { user } = result;
   
     if (user.confirmationToken !== token) {
-      throw new Error("Invalid token");
+      throw new AuthorizationError("Invalid token", "INVALID_TOKEN");
     }
   
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
   
       if (decoded.type !== 'email-confirmation' || decoded.email !== email) {
-        throw new Error("Invalid token");
+        throw new AuthorizationError("Invalid token", "INVALID_TOKEN");
       }
   
       if (decoded.otp !== otp) {
-        throw new Error("Invalid OTP");
+        throw new AuthorizationError("Invalid OTP", "INVALID_OTP");
       }
     } catch (error) {
       if (error.name === 'TokenExpiredError') {
-        throw new Error("Confirmation token has expired");
+        throw new AuthorizationError("Confirmation token has expired", "TOKEN_EXPIRED");
       }
-      throw new Error("Invalid token");
+      throw new AuthorizationError("Invalid token", "INVALID_TOKEN");
     }
   
     if (user.otp !== otp) {
-      throw new Error("Invalid OTP");
+      throw new AuthorizationError("Invalid OTP", "INVALID_OTP");
     }
   
     user.confirmed = true;
@@ -148,11 +158,11 @@ class AuthService {
 
   async login({ email, password }) {
     const result = await this.getUserByEmail(email);
-    if (!result) throw new Error("Invalid email or password");
+    if (!result) throw new AuthorizationError("Invalid email or password", "INVALID_CREDENTIALS");
     const { user } = result;
     
     const isMatch = await bcrypt.compare(password, user.hashedPassword);
-    if (!isMatch) throw new Error("Invalid email or password");
+    if (!isMatch) throw new AuthorizationError("Invalid email or password", "INVALID_CREDENTIALS");
   
     const payload = { id: user._id };
     const accessToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
@@ -172,7 +182,7 @@ class AuthService {
 
   async forgotPassword(email) {
     const result = await this.getUserByEmail(email);
-    if (!result) throw new Error("User not found");
+    if (!result) throw new NotFoundError("User not found", "USER_NOT_FOUND");
     const { user } = result;
     
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -194,14 +204,14 @@ class AuthService {
 
   async confirmOtp({ email, forgotToken, otp }) {
     const result = await this.getUserByEmail(email);
-    if (!result) throw new Error("User not found");
+    if (!result) throw new NotFoundError("User not found", "USER_NOT_FOUND");
     const { user } = result;
     
     try {
       const decoded = jwt.verify(forgotToken, process.env.JWT_SECRET);
       
       if (decoded.email !== email || user.otp !== otp) {
-        throw new Error("Invalid token or OTP");
+        throw new AuthorizationError("Invalid OTP", "INVALID_CREDENTIALS");
       }
       
       const payload = { email, purpose: 'reset_password' };
@@ -213,9 +223,9 @@ class AuthService {
       return { resetToken };
     } catch (error) {
       if (error.name === 'TokenExpiredError') {
-        throw new Error("OTP has expired. Please request a new one.");
+        throw new AuthorizationError("OTP has expired. Please request a new one.", "TOKEN_EXPIRED");
       } else if (error.name === 'JsonWebTokenError') {
-        throw new Error("Invalid token. Please request a new OTP.");
+        throw new AuthorizationError("Invalid token. Please request a new OTP.", "INVALID_TOKEN");
       }
       throw error;
     }
@@ -223,31 +233,33 @@ class AuthService {
 
   async resetPassword({ email, newPassword, resetToken }) {
     const result = await this.getUserByEmail(email);
-    if (!result) throw new Error("User not found");
+    if (!result) throw new NotFoundError("User not found", "USER_NOT_FOUND");
     const { user, Model } = result;
   
     try {
       const decoded = jwt.verify(resetToken, process.env.JWT_SECRET);
       
       if (decoded.email !== email || decoded.purpose !== 'reset_password') {
-        throw new Error("Invalid reset token");
+        throw new AuthorizationError("Invalid reset token", "INVALID_TOKEN");
       }
       
       if (user.confirmationToken !== resetToken) {
-        throw new Error("Invalid reset token");
+        throw new AuthorizationError("Invalid reset token", "INVALID_TOKEN");
       }
     } catch (error) {
       if (error.name === 'TokenExpiredError') {
-        throw new Error("Reset token has expired. Please request a new one.");
+        throw new AuthorizationError("Reset token has expired. Please request a new one.", "TOKEN_EXPIRED");
       } else if (error.name === 'JsonWebTokenError') {
-        throw new Error("Invalid reset token. Please request a new password reset.");
+        throw new AuthorizationError("Invalid reset token. Please request a new password reset.", "INVALID_TOKEN");
       }
       throw error; 
     }
   
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{6,}$/;
     if (!passwordRegex.test(newPassword)) {
-      throw new Error("Password must be at least 6 characters long and include an uppercase letter, a lowercase letter, a number, and a special character.");
+      throw new ValidationError("Password validation failed", [
+        { field: "password", message: "Password must be at least 6 characters long and include an uppercase letter, a lowercase letter, a number, and a special character." }
+      ]);
     }
   
     const hashedPassword = await bcrypt.hash(newPassword, 10);
@@ -281,7 +293,7 @@ class AuthService {
       const decoded = jwt.verify(refreshToken, process.env.JWT_SECRET);
       
       if (decoded.id !== userId) {
-        throw new Error("Invalid refresh token");
+        throw new AuthorizationError("Invalid refresh token", "INVALID_TOKEN");
       }
   
       const payload = { id: userId };
@@ -294,9 +306,9 @@ class AuthService {
       };
     } catch (error) {
       if (error.name === 'TokenExpiredError') {
-        throw new Error('Refresh token has expired');
+        throw new AuthorizationError('Refresh token has expired', "TOKEN_EXPIRED");
       }
-      throw new Error('Invalid refresh token');
+      throw new AuthorizationError('Invalid refresh token', "INVALID_TOKEN");
     }
   }
 }

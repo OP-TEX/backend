@@ -2,6 +2,7 @@ const express = require('express');
 const connectDB = require('./lib/db');
 const authmiddleware = require('./middleware/authMiddleware');
 const fileUpload = require('express-fileupload');
+const { exceptionHandler } = require('./middleware/errorHandlerMiddleware');
 require('dotenv').config();
 
 const authRoutes = require('./routes/authRoutes');
@@ -27,7 +28,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/products', productRoutes(productController));
 
-app.post('/ai-trial', authmiddleware, async(req, res) => {
+app.post('/ai-trial', authmiddleware, async(req, res, next) => {
   try {
     console.log(req.user);
     const { message, device } = req.body;
@@ -38,10 +39,12 @@ app.post('/ai-trial', authmiddleware, async(req, res) => {
     console.log(response);
     res.send({ message: response });
   } catch (error) {
-    console.error('AI Trial Error:', error);
-    res.status(500).json({ error: 'Failed to process AI request' });
+    next(error);
   }
 });
+
+// Error handling middleware - should be after all routes
+app.use(exceptionHandler);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, async () => {

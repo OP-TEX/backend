@@ -1,4 +1,5 @@
 const cloudinary = require('cloudinary').v2;
+const { CloudinaryError } = require('../utils/baseException');
 
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -15,7 +16,7 @@ const uploadImage = async (filePath) => {
         return result.secure_url;
     } catch (error) {
         console.error('Error uploading to cloudinary:', error);
-        throw new Error('Failed to upload image');
+        throw new CloudinaryError('Failed to upload image');
     }
 };
 
