@@ -11,6 +11,8 @@ const AdminService = require('../services/adminServices');
 const AdminController = require('../controllers/adminControllers');
 const ProductService = require('../services/productServices');
 const ProductController = require('../controllers/productControllers');
+const OrderService = require('../services/orderServices');
+const OrderController = require('../controllers/orderControllers');
 
 // Connect to MongoDB
 connectDB();
@@ -35,8 +37,12 @@ const adminController = new AdminController(adminService);
 const productService = new ProductService(models);
 const productController = new ProductController(productService);
 
+const orderService = new OrderService(models);
+const orderController = new OrderController(orderService);
+
 module.exports = { 
   authController, 
   adminController,
-  productController
+  productController,
+  orderController
 };

@@ -8,12 +8,12 @@ const OrderSchema = new Schema({
             productId: { type: String, required: true },
             productName: { type: String, required: true },
             productPrice: { type: Number, required: true },
-            productImage: { type: String, required: true },
+            productImage: { type: String, required: false },
             quantity: { type: Number, required: true }
         }
     ],
     totalPrice: { type: Number, required: true },
-    deliveryId: { type: String, required: true },
+    deliveryId: { type: String, required: false },
     userId: { type: String, required: true },
     address: {
         street: { type: String, required: true },

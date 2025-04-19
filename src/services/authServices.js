@@ -4,7 +4,6 @@ const crypto = require('crypto');
 const { sendMail, sendOTP } = require('../lib/mail');
 const { 
   ConflictError, 
-  ValidationError, 
   NotFoundError, 
   AuthorizationError,
   BadRequestError
@@ -24,21 +23,23 @@ class AuthService {
     const normalizedRole = role.toLowerCase();
     const Model = this.models[normalizedRole];
     if (!Model) {
-      throw new ValidationError("Invalid role provided", [{ field: "role", message: "Role is invalid" }]);
+      throw new BadRequestError("Invalid role provided: Role is invalid", "INVALID_ROLE");
     }
   
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{6,}$/;
     if (!passwordRegex.test(password)) {
-      throw new ValidationError("Password validation failed", [
-        { field: "password", message: "Password must be at least 6 characters long and include an uppercase letter, a lowercase letter, a number, and a special character." }
-      ]);
+      throw new BadRequestError(
+        "Password must be at least 6 characters long and include an uppercase letter, a lowercase letter, a number, and a special character.",
+        "INVALID_PASSWORD"
+      );
     }
   
     const phoneRegex = /^(010|011|012|015)\d{8}$/;
     if (!phoneRegex.test(phone)) {
-      throw new ValidationError("Phone validation failed", [
-        { field: "phone", message: "Phone number must begin with 010, 011, 012, or 015 and be followed by exactly 8 digits." }
-      ]);
+      throw new BadRequestError(
+        "Phone number must begin with 010, 011, 012, or 015 and be followed by exactly 8 digits.",
+        "INVALID_PHONE"
+      );
     }
   
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -263,9 +264,10 @@ class AuthService {
   
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{6,}$/;
     if (!passwordRegex.test(newPassword)) {
-      throw new ValidationError("Password validation failed", [
-        { field: "password", message: "Password must be at least 6 characters long and include an uppercase letter, a lowercase letter, a number, and a special character." }
-      ]);
+      throw new BadRequestError(
+        "Password must be at least 6 characters long and include an uppercase letter, a lowercase letter, a number, and a special character.",
+        "INVALID_PASSWORD"
+      );
     }
   
     const hashedPassword = await bcrypt.hash(newPassword, 10);
