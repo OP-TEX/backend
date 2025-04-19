@@ -1,7 +1,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-const { sendMail } = require('../lib/mail');
+const { sendMail, sendOTP } = require('../lib/mail');
 const { 
   ConflictError, 
   ValidationError, 
@@ -96,10 +96,13 @@ class AuthService {
     user.otp = otp;
     await user.save();
   
-    const subject = "Email Confirmation";
-    const text = `Your confirmation code (OTP) is ${otp}`;
-    const html = `<p>Your confirmation code (OTP) is <strong>${otp}</strong></p>`;
-    await sendMail(email, subject, text, html);
+    await sendOTP({
+      email,
+      phone: user.phone,
+      otp,
+      subject: "Email Confirmation",
+      purpose: "confirmation"
+    });
   
     return { 
       token: confirmationToken
@@ -194,10 +197,13 @@ class AuthService {
     user.otp = otp; 
     await user.save();
 
-    const subject = "Password Reset Request";
-    const text = `Your OTP is ${otp}. This code will expire in 20 minutes. If you did not request a password reset, please ignore this email.`;
-    const html = `<p>Your OTP is <strong>${otp}</strong>. This code will expire in 20 minutes. If you did not request a password reset, please ignore this email.</p>`;
-    await sendMail(email, subject, text, html);
+    await sendOTP({
+      email,
+      phone: user.phone,
+      otp,
+      subject: "Password Reset Request",
+      purpose: "password reset"
+    });
 
     return { forgotToken }; 
   }
