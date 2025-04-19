@@ -1,53 +1,40 @@
+const { BadRequestError, NotFoundError, ServerError } = require('../utils/baseException');
+
 class ProductController {
   constructor(productService) {
     this.productService = productService;
   }
 
-  getAllProducts = async (req, res) => {
+  getAllProducts = async (req, res, next) => {
     try {
       const result = await this.productService.getProducts(req.query);
       res.json(result);
     } catch (error) {
-      res.status(400).json({ message: error.message });
+      if (error.message === 'Invalid product ID format') {
+        next(new BadRequestError(error.message, 'INVALID_ID_FORMAT'));
+      } else if (error.message === 'Product not found') {
+        next(new NotFoundError(error.message, 'PRODUCT_NOT_FOUND'));
+      } else {
+        next(new ServerError('Error fetching products'));
+      }
     }
   };
 
-  getProductById = async (req, res) => {
+  getBestSellers = async (req, res, next) => {
     try {
-      const product = await this.productService.getProductById(req.params.id);
-      if (!product) return res.status(404).json({ message: 'Product not found' });
-      res.json(product);
+      const bestSellers = await this.productService.getBestSellers();
+      res.json(bestSellers);
     } catch (error) {
-      res.status(500).json({ message: error.message });
+      next(new ServerError('Error fetching best sellers'));
     }
   };
 
-  createProduct = async (req, res) => {
+  getFeaturedProducts = async (req, res, next) => {
     try {
-      const product = await this.productService.createProduct(req.body);
-      res.status(201).json(product);
+      const products = await this.productService.getFeaturedProducts(req.user);
+      res.json(products);
     } catch (error) {
-      res.status(400).json({ message: error.message });
-    }
-  };
-
-  updateProduct = async (req, res) => {
-    try {
-      const product = await this.productService.updateProduct(req.params.id, req.body);
-      if (!product) return res.status(404).json({ message: 'Product not found' });
-      res.json(product);
-    } catch (error) {
-      res.status(400).json({ message: error.message });
-    }
-  };
-
-  deleteProduct = async (req, res) => {
-    try {
-      const product = await this.productService.deleteProduct(req.params.id);
-      if (!product) return res.status(404).json({ message: 'Product not found' });
-      res.json({ message: 'Product deleted' });
-    } catch (error) {
-      res.status(500).json({ message: error.message });
+      next(new ServerError('Error fetching featured products'));
     }
   };
 }

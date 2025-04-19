@@ -18,6 +18,18 @@ class AdminController {
         }
     }
 
+    async getAllUsersWithRoles(req, res) {
+        try {
+            if (req.user.role !== 'admin') {
+                return res.status(403).json({ error: 'Not authorized' });
+            }
+            const users = await this.adminService.getAllUsersWithRoles();
+            res.status(200).json(users);
+        } catch (error) {
+            res.status(400).json({ error: error.message });
+        }
+    }
+
     async getAllDelivery(req, res) {
         try {
             if (req.user.role !== 'admin') {
@@ -47,9 +59,27 @@ class AdminController {
             if (req.user.role !== 'admin') {
                 return res.status(403).json({ error: 'Not authorized' });
             }
+
             const { id } = req.params;
-            await this.adminService.deleteUser(id);
-            res.status(200).json({ message: 'User deleted successfully' });
+            
+            if (!id) {
+                return res.status(400).json({ error: 'User ID is required' });
+            }
+
+            // Validate MongoDB ObjectId
+            if (!mongoose.Types.ObjectId.isValid(id)) {
+                return res.status(400).json({ error: 'Invalid user ID format' });
+            }
+
+            try {
+                const result = await this.adminService.deleteUser(id);
+                res.status(200).json(result);
+            } catch (error) {
+                if (error.message === 'User not found') {
+                    return res.status(404).json({ error: 'User not found' });
+                }
+                throw error;
+            }
         } catch (error) {
             res.status(400).json({ error: error.message });
         }
@@ -137,6 +167,41 @@ class AdminController {
                 }
                 throw error;
             }
+        } catch (error) {
+            res.status(400).json({ error: error.message });
+        }
+    }
+
+    async updateUserRole(req, res) {
+        try {
+            if (req.user.role !== 'admin') {
+                return res.status(403).json({ error: 'Not authorized' });
+            }
+
+            const { id } = req.params;
+            const { role } = req.body;
+
+            if (!id) {
+                return res.status(400).json({ error: 'User ID is required' });
+            }
+
+            if (!role) {
+                return res.status(400).json({ error: 'New role is required' });
+            }
+
+            // Validate role
+            const validRoles = ['customer', 'delivery', 'customer service'];
+            if (!validRoles.includes(role)) {
+                return res.status(400).json({ error: 'Invalid role' });
+            }
+
+            // Validate MongoDB ObjectId
+            if (!mongoose.Types.ObjectId.isValid(id)) {
+                return res.status(400).json({ error: 'Invalid user ID format' });
+            }
+
+            const result = await this.adminService.updateUserRole(id, role);
+            res.status(200).json(result);
         } catch (error) {
             res.status(400).json({ error: error.message });
         }

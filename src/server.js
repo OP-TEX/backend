@@ -9,6 +9,7 @@ const authRoutes = require('./routes/authRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const productRoutes = require('./routes/productRoutes');
 const orderRoutes = require('./routes/orderRoutes');
+const userRoutes = require('./routes/userRoutes');
 const { getAIResponse } = require('./lib/ai');
 const { authController, adminController, productController, orderController } = require('./lib/di');
 const app = express();
@@ -29,6 +30,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/products', productRoutes(productController));
 app.use('/api/orders', orderRoutes(orderController)); // Added missing slash
+app.use('/api/user', userRoutes);
 
 app.post('/ai-trial', authmiddleware, async(req, res, next) => {
   try {
