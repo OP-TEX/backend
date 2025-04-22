@@ -157,20 +157,20 @@ const sendOTP = async ({ email, phone, otp, subject, purpose = 'verification' })
     `;
 
     
-    // Send email with OTP
-    await sendMail(email, subject, text, html);
+    // // Send email with OTP
+    // await sendMail(email, subject, text, html);
     
-    // If phone number is provided, also send SMS
-    if (phone) {
-        try {
-            // Format phone number if needed (ensure it has country code)
-            const formattedPhone = formatPhoneNumber(phone);
-            await sendOtpBySMS(formattedPhone, otp);
-        } catch (error) {
-            console.error('Failed to send OTP via SMS:', error);
-            // Continue even if SMS fails, as email was already sent
-        }
-    }
+    // // If phone number is provided, also send SMS
+    // if (phone) {
+    //     try {
+    //         // Format phone number if needed (ensure it has country code)
+    //         const formattedPhone = formatPhoneNumber(phone);
+    //         await sendOtpBySMS(formattedPhone, otp);
+    //     } catch (error) {
+    //         console.error('Failed to send OTP via SMS:', error);
+    //         // Continue even if SMS fails, as email was already sent
+    //     }
+    // }
 };
 
 /**

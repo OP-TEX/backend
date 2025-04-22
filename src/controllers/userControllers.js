@@ -146,6 +146,78 @@ class UserController {
             next(error);
         }
     }
+
+    async addAddress(req, res, next) {
+        try {
+            if (req.method !== 'POST') {
+                throw new MethodNotAllowedError("Method not allowed", "METHOD_NOT_ALLOWED");
+            }
+
+            const addressData = req.body;
+            if (!addressData) {
+                throw new BadRequestError("Address data is required", "ADDRESS_DATA_REQUIRED");
+            }
+
+            const result = await this.userService.addAddress(req.user._id, addressData);
+            res.status(201).json(result);
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    async updateAddress(req, res, next) {
+        try {
+            if (req.method !== 'PUT') {
+                throw new MethodNotAllowedError("Method not allowed", "METHOD_NOT_ALLOWED");
+            }
+
+            const { addressId } = req.params;
+            if (!addressId) {
+                throw new BadRequestError("Address ID is required", "ADDRESS_ID_REQUIRED");
+            }
+
+            const addressData = req.body;
+            if (!addressData) {
+                throw new BadRequestError("Address data is required", "ADDRESS_DATA_REQUIRED");
+            }
+
+            const result = await this.userService.updateAddress(req.user._id, addressId, addressData);
+            res.status(200).json(result);
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    async deleteAddress(req, res, next) {
+        try {
+            if (req.method !== 'DELETE') {
+                throw new MethodNotAllowedError("Method not allowed", "METHOD_NOT_ALLOWED");
+            }
+
+            const { addressId } = req.params;
+            if (!addressId) {
+                throw new BadRequestError("Address ID is required", "ADDRESS_ID_REQUIRED");
+            }
+
+            const result = await this.userService.deleteAddress(req.user._id, addressId);
+            res.status(200).json(result);
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    async getAllAddresses(req, res, next) {
+        try {
+            if (req.method !== 'GET') {
+                throw new MethodNotAllowedError("Method not allowed", "METHOD_NOT_ALLOWED");
+            }
+
+            const result = await this.userService.getAllAddresses(req.user._id);
+            res.status(200).json(result);
+        } catch (error) {
+            next(error);
+        }
+    }
 }
 
 module.exports = UserController;

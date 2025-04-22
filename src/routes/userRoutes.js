@@ -10,28 +10,45 @@ const asyncHandler = (fn) => (req, res, next) => {
 
 router.get('/test', asyncHandler((req, res, next) => userController.test(req, res, next)));
 
-router.post('/cart/add', authMiddleware, asyncHandler((req, res, next) => 
+router.post('/cart/add', authMiddleware, asyncHandler((req, res, next) =>
     userController.addToCart(req, res, next)
 ));
 
-router.delete('/cart/remove', authMiddleware, asyncHandler((req, res, next) => 
+router.delete('/cart/remove', authMiddleware, asyncHandler((req, res, next) =>
     userController.deleteFromCart(req, res, next)
 ));
 
-router.get('/cart', authMiddleware, asyncHandler((req, res, next) => 
+router.get('/cart', authMiddleware, asyncHandler((req, res, next) =>
     userController.viewCart(req, res, next)
 ));
 
-router.get('/profile', authMiddleware, asyncHandler((req, res, next) => 
+router.get('/profile', authMiddleware, asyncHandler((req, res, next) =>
     userController.viewProfile(req, res, next)
 ));
 
-router.put('/profile', authMiddleware, asyncHandler((req, res, next) => 
+router.put('/profile', authMiddleware, asyncHandler((req, res, next) =>
     userController.updateProfile(req, res, next)
 ));
 
-router.post('/change-password', authMiddleware, asyncHandler((req, res, next) => 
+router.post('/change-password', authMiddleware, asyncHandler((req, res, next) =>
     userController.changePassword(req, res, next)
+));
+
+// New routes for address management
+router.get('/addresses', authMiddleware, asyncHandler((req, res, next) =>
+    userController.getAllAddresses(req, res, next)
+));
+
+router.post('/addresses/add', authMiddleware, asyncHandler((req, res, next) =>
+    userController.addAddress(req, res, next)
+));
+
+router.put('/addresses/:addressId', authMiddleware, asyncHandler((req, res, next) =>
+    userController.updateAddress(req, res, next)
+));
+
+router.delete('/addresses/:addressId', authMiddleware, asyncHandler((req, res, next) =>
+    userController.deleteAddress(req, res, next)
 ));
 
 module.exports = router;
