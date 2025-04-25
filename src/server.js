@@ -3,6 +3,7 @@ const connectDB = require('./lib/db');
 const authmiddleware = require('./middleware/authMiddleware');
 const fileUpload = require('express-fileupload');
 const { exceptionHandler } = require('./middleware/errorHandlerMiddleware');
+const path = require('path');
 require('dotenv').config();
 
 const authRoutes = require('./routes/authRoutes');
@@ -28,77 +29,7 @@ app.use(fileUpload({
 
 // Add welcome page route at the root URL
 app.get('/', (req, res) => {
-  res.send(`
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Welcome to Optex Store</title>
-      <style>
-        body {
-          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-          line-height: 1.6;
-          color: #333;
-          max-width: 800px;
-          margin: 0 auto;
-          padding: 20px;
-          text-align: center;
-        }
-        h1 {
-          color: #2d3748;
-          margin-bottom: 10px;
-        }
-        .logo {
-          font-size: 3rem;
-          font-weight: bold;
-          color: #3182ce;
-          margin-bottom: 1rem;
-        }
-        .card {
-          background-color: #f8f9fa;
-          border-radius: 8px;
-          padding: 30px;
-          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-          margin-top: 20px;
-        }
-        .endpoints {
-          text-align: left;
-          margin-top: 30px;
-        }
-        .endpoint {
-          background-color: #edf2f7;
-          border-radius: 4px;
-          padding: 10px;
-          margin-bottom: 10px;
-        }
-        code {
-          background-color: #e2e8f0;
-          padding: 2px 4px;
-          border-radius: 4px;
-          font-family: monospace;
-        }
-      </style>
-    </head>
-    <body>
-      <div class="logo">OPTEX</div>
-      <h1>Welcome to Optex Store API</h1>
-      <div class="card">
-        <p>This is the backend API for Optex Store, your one-stop solution for optical products.</p>
-        <p>The API is up and running! 🚀</p>
-        
-        <div class="endpoints">
-          <h2>Available API Endpoints:</h2>
-          <div class="endpoint"><code>/api/auth</code> - Authentication services</div>
-          <div class="endpoint"><code>/api/products</code> - Product catalog</div>
-          <div class="endpoint"><code>/api/user</code> - User management</div>
-          <div class="endpoint"><code>/api/orders</code> - Order processing</div>
-          <div class="endpoint"><code>/api/admin</code> - Admin panel (restricted access)</div>
-        </div>
-      </div>
-    </body>
-    </html>
-  `);
+  res.sendFile(path.join(__dirname, 'views', 'welcome.html'));
 });
 
 app.use('/api/auth', authRoutes);
