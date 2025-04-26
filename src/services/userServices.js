@@ -115,6 +115,29 @@ class UserService {
         }
     }
 
+    async clearCart(user) {
+        try {
+            // Get the actual user document from database
+            const userDoc = await this.models.customer.findById(user._id);
+            if (!userDoc) {
+                throw new NotFoundError("User not found", "USER_NOT_FOUND");
+            }
+
+            // Clear all items from the cart
+            userDoc.cart.items = [];
+
+            // Save the updated user document
+            await userDoc.save();
+
+            return {
+                message: "Cart cleared successfully",
+                cart: userDoc.cart
+            };
+        } catch (error) {
+            throw error;
+        }
+    }
+
     async viewCart(user) {
         try {
             const userDoc = await this.models.customer.findById(user._id);

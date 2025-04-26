@@ -86,6 +86,13 @@ class OrderService {
                 address: orderData.address,
                 payment_method: orderData.payment_method
             });
+
+            // Clear the user's cart after successful order creation
+            await this.models.customer.findByIdAndUpdate(
+                userId,
+                { $set: { 'cart.items': [] } }
+            );
+
             if (assignedDeliveryMan) {
                 assignedDeliveryMan.orders.push({
                     orderId: generatedOrderId,
@@ -109,7 +116,7 @@ class OrderService {
                 { orderId },
                 {
                     deliveryId: deliveryId,
-                    status: status 
+                    status: status
                 },
                 { new: true }
             );

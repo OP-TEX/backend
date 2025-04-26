@@ -22,6 +22,9 @@ router.get('/cart', authMiddleware, asyncHandler((req, res, next) =>
     userController.viewCart(req, res, next)
 ));
 
+// Clear cart endpoint
+router.delete('/cart/clear', authMiddleware, userController.clearCart.bind(userController));
+
 router.get('/profile', authMiddleware, asyncHandler((req, res, next) =>
     userController.viewProfile(req, res, next)
 ));

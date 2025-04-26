@@ -78,6 +78,23 @@ class UserController {
         }
     }
 
+    async clearCart(req, res, next) {
+        try {
+            if (req.method !== 'DELETE') {
+                throw new MethodNotAllowedError("Method not allowed", "METHOD_NOT_ALLOWED");
+            }
+
+            const result = await this.userService.clearCart(req.user);
+
+            res.status(200).json({
+                message: "Cart cleared successfully",
+                cart: result.cart
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
     async viewCart(req, res, next) {
         try {
             if (req.method !== 'GET') {
