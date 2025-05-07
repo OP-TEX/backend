@@ -159,6 +159,42 @@ class AdminService {
         }
     }
 
+    async updateProduct(productId, productData) {
+        const session = await this.models.product.startSession();
+        try {
+            await session.withTransaction(async () => {
+                const product = await this.models.product.findById(productId).session(session);
+                if (!product) {
+                    throw new Error('Product not found');
+                }
+
+                // Update basic product details
+                product.name = productData.name;
+                product.price = productData.price;
+                product.description = productData.description;
+                product.category = productData.category;
+                product.vendor = productData.vendor;
+                product.stock = productData.stock;
+
+                // Handle images
+                const existingImages = productData.existingImages || [];
+                const newImagesUrls = productData.imagesUrl || [];
+
+                // Combine existing and new images
+                product.imagesUrl = [...existingImages, ...newImagesUrls];
+
+                await product.save({ session });
+            });
+
+            const updatedProduct = await this.models.product.findById(productId);
+            return updatedProduct;
+        } catch (error) {
+            throw new Error(`Failed to update product: ${error.message}`);
+        } finally {
+            session.endSession();
+        }
+    }
+
     async getAllUsersWithRoles() {
         const users = await this.models.customer.find({}).select('-hashedPassword -confirmationToken -otp').lean();
         const delivery = await this.models.delivery.find({}).select('-hashedPassword -confirmationToken -otp').lean();

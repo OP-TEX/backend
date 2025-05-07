@@ -206,6 +206,55 @@ class AdminController {
             res.status(400).json({ error: error.message });
         }
     }
+
+    async updateProduct(req, res) {
+        try {
+            if (req.user.role !== 'admin') {
+                return res.status(403).json({ error: 'Not authorized' });
+            }
+
+            const { id } = req.params;
+            if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+                return res.status(400).json({ error: 'Valid product ID is required' });
+            }
+
+            const { name, price, description, category, vendor, stock, existingImages } = req.body;
+
+            // Handle new image uploads if any
+            const imagesUrl = [];
+            if (req.files && req.files.images) {
+                const images = Array.isArray(req.files.images) ? req.files.images : [req.files.images];
+                
+                const maxSize = 2 * 1024 * 1024; // 2MB
+                for (const image of images) {
+                    if (image.size > maxSize) {
+                        return res.status(400).json({ 
+                            error: `Image ${image.name} exceeds the 2MB size limit`
+                        });
+                    }
+                    
+                    const imageUrl = await uploadImage(image.tempFilePath);
+                    imagesUrl.push(imageUrl);
+                }
+            }
+
+            const productData = {
+                name,
+                price: Number(price),
+                description,
+                category,
+                vendor,
+                stock: Number(stock),
+                existingImages: JSON.parse(existingImages || '[]'),
+                imagesUrl
+            };
+
+            const updatedProduct = await this.adminService.updateProduct(id, productData);
+            res.status(200).json(updatedProduct);
+        } catch (error) {
+            res.status(400).json({ error: error.message });
+        }
+    }
 }
 
 module.exports = AdminController;
