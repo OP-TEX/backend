@@ -1,3 +1,5 @@
+const { NotFoundError } = require('../utils/baseException');
+
 class OrderController {
     constructor(orderService) {
         this.orderService = orderService;
@@ -50,7 +52,7 @@ class OrderController {
         try {
             const { orderId } = req.params;
             const order = await this.orderService.getOrderById(orderId);
-            if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+            // No need for manual check since service now throws NotFoundError
             res.json({ success: true, order });
         } catch (error) {
             next(error);
@@ -69,7 +71,7 @@ class OrderController {
     };
 
     // Update order status (admin or delivery)
-    // PUT /api/orders/:orderId/status
+    // PUT /api/orders/:orderId
     // req.body = { status: "Confirmed" | "Out for Delivery" | "Delivered" | "Cancelled" }
     updateOrderStatus = async (req, res, next) => {
         try {

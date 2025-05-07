@@ -1,5 +1,12 @@
 const { NotFoundError, ValidationError, AuthorizationError } = require('../utils/baseException');
 const bcrypt = require('bcryptjs');
+const mongoose = require('mongoose');
+const fs = require('fs');
+const path = require('path');
+
+// Read the governorates and cities data from JSON files
+const governoratesData = JSON.parse(fs.readFileSync(path.join(__dirname, '../utils/governorates.json'), 'utf8'));
+const citiesData = JSON.parse(fs.readFileSync(path.join(__dirname, '../utils/cities.json'), 'utf8')).pop().data;
 
 class UserService {
     constructor(models) {
@@ -92,7 +99,7 @@ class UserService {
             }
 
             const currentQuantity = userDoc.cart.items[existingItemIndex].quantity;
-            
+
             // If quantity to remove is greater than or equal to current quantity, remove item
             if (quantity >= currentQuantity) {
                 userDoc.cart.items.splice(existingItemIndex, 1);
@@ -103,6 +110,29 @@ class UserService {
 
             await userDoc.save();
             return userDoc.cart;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    async clearCart(user) {
+        try {
+            // Get the actual user document from database
+            const userDoc = await this.models.customer.findById(user._id);
+            if (!userDoc) {
+                throw new NotFoundError("User not found", "USER_NOT_FOUND");
+            }
+
+            // Clear all items from the cart
+            userDoc.cart.items = [];
+
+            // Save the updated user document
+            await userDoc.save();
+
+            return {
+                message: "Cart cleared successfully",
+                cart: userDoc.cart
+            };
         } catch (error) {
             throw error;
         }
@@ -160,14 +190,14 @@ class UserService {
     async updateProfile(userId, updateData) {
         try {
             // Check if any protected field is being attempted to update
-            const protectedFields = ['cart', 'email', '_id', 'confirmed', 'confirmationToken', 'otp', 'password', 'hashedPassword'];
+            const protectedFields = ['cart', 'email', '_id', 'confirmed', 'confirmationToken', 'otp', 'password', 'hashedPassword', 'addresses'];
             const attemptedProtectedFields = protectedFields.filter(field => field in updateData);
-            
+
             if (attemptedProtectedFields.length > 0) {
                 throw new ValidationError("Cannot update protected fields", [
-                    { 
-                        field: attemptedProtectedFields.join(', '), 
-                        message: `The following fields cannot be updated: ${attemptedProtectedFields.join(', ')}` 
+                    {
+                        field: attemptedProtectedFields.join(', '),
+                        message: `The following fields cannot be updated: ${attemptedProtectedFields.join(', ')}`
                     }
                 ]);
             }
@@ -226,6 +256,212 @@ class UserService {
             return { message: "Password changed successfully" };
         } catch (error) {
             throw error;
+        }
+    }
+
+    async addAddress(userId, addressData) {
+        try {
+            // Validate address data including governorate and city validation
+            this.validateAddressData(addressData);
+
+            const user = await this.models.customer.findById(userId);
+            if (!user) {
+                throw new NotFoundError("User not found", "USER_NOT_FOUND");
+            }
+
+            // Add the new address to the addresses array
+            user.addresses.push(addressData);
+            await user.save();
+
+            return {
+                message: "Address added successfully",
+                addressId: user.addresses[user.addresses.length - 1]._id
+            };
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    async updateAddress(userId, addressId, addressData) {
+        try {
+            // Only validate fields that are being updated
+            if (addressData.Gover || addressData.city) {
+                // If updating one location field, ensure both are present for validation
+                const user = await this.models.customer.findById(userId);
+                if (!user) {
+                    throw new NotFoundError("User not found", "USER_NOT_FOUND");
+                }
+
+                const addressIndex = user.addresses.findIndex(
+                    addr => addr._id.toString() === addressId
+                );
+
+                if (addressIndex === -1) {
+                    throw new NotFoundError("Address not found", "ADDRESS_NOT_FOUND");
+                }
+
+                const existingAddress = user.addresses[addressIndex].toObject();
+
+                // Create a complete address object for validation
+                const completeAddressData = {
+                    ...existingAddress,
+                    ...addressData
+                };
+
+                this.validateAddressData(completeAddressData);
+            } else {
+                // Validate other required fields if they're being updated
+                const fieldsToValidate = Object.keys(addressData);
+                const requiredFields = ['street', 'building', 'floor', 'apartment'];
+                const missingRequiredFields = requiredFields.filter(
+                    field => fieldsToValidate.includes(field) && !addressData[field]
+                );
+
+                if (missingRequiredFields.length > 0) {
+                    throw new ValidationError("Missing required address fields",
+                        missingRequiredFields.map(field => ({
+                            field,
+                            message: `${field} is required`
+                        }))
+                    );
+                }
+            }
+
+            // Validate addressId format
+            if (!mongoose.Types.ObjectId.isValid(addressId)) {
+                throw new ValidationError("Invalid address ID", [
+                    { field: "addressId", message: "Invalid address ID format" }
+                ]);
+            }
+
+            const user = await this.models.customer.findById(userId);
+            if (!user) {
+                throw new NotFoundError("User not found", "USER_NOT_FOUND");
+            }
+
+            // Find the address index in the array
+            const addressIndex = user.addresses.findIndex(
+                addr => addr._id.toString() === addressId
+            );
+
+            if (addressIndex === -1) {
+                throw new NotFoundError("Address not found", "ADDRESS_NOT_FOUND");
+            }
+
+            // Update the address at the found index
+            user.addresses[addressIndex] = {
+                ...user.addresses[addressIndex].toObject(),
+                ...addressData,
+                _id: user.addresses[addressIndex]._id // Preserve the original ID
+            };
+
+            await user.save();
+            return {
+                message: "Address updated successfully",
+                address: user.addresses[addressIndex]
+            };
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    async deleteAddress(userId, addressId) {
+        try {
+            // Validate addressId format
+            if (!mongoose.Types.ObjectId.isValid(addressId)) {
+                throw new ValidationError("Invalid address ID", [
+                    { field: "addressId", message: "Invalid address ID format" }
+                ]);
+            }
+
+            const user = await this.models.customer.findById(userId);
+            if (!user) {
+                throw new NotFoundError("User not found", "USER_NOT_FOUND");
+            }
+
+            // Find the address index
+            const addressIndex = user.addresses.findIndex(
+                addr => addr._id.toString() === addressId
+            );
+
+            if (addressIndex === -1) {
+                throw new NotFoundError("Address not found", "ADDRESS_NOT_FOUND");
+            }
+
+            // Remove the address at the found index
+            user.addresses.splice(addressIndex, 1);
+            await user.save();
+
+            return {
+                message: "Address deleted successfully"
+            };
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    async getAllAddresses(userId) {
+        try {
+            const user = await this.models.customer.findById(userId);
+            if (!user) {
+                throw new NotFoundError("User not found", "USER_NOT_FOUND");
+            }
+
+            return {
+                addresses: user.addresses || []
+            };
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    // Helper method to validate address data
+    validateAddressData(addressData) {
+        const requiredFields = ['street', 'city', 'Gover', 'building', 'floor', 'apartment'];
+        const missingFields = requiredFields.filter(field => !addressData[field]);
+
+        if (missingFields.length > 0) {
+            throw new ValidationError("Missing required address fields (${missingFields.join(', ')})",
+                missingFields.map(field => ({
+                    field,
+                    message: `${field} is required`
+                }))
+            );
+        }
+
+        // Validate governorate (Gover)
+        const gover = addressData.Gover;
+        const validGovernorate = governoratesData.find(g =>
+            g.governorate_name_en.toLowerCase() === gover.toLowerCase() ||
+            g.governorate_name_ar === gover
+        );
+
+        if (!validGovernorate) {
+            throw new ValidationError("Invalid governorate", [
+                { field: "Gover", message: "Must be one of the valid governorates in Egypt" }
+            ]);
+        }
+
+        // Validate city based on selected governorate
+        const city = addressData.city;
+        const governorateId = validGovernorate.id;
+
+        // Filter cities that belong to the selected governorate
+        const validCities = citiesData.filter(c => c.governorate_id === governorateId);
+
+        // Check if the provided city is valid for the selected governorate
+        const isValidCity = validCities.some(c =>
+            c.city_name_en.toLowerCase() === city.toLowerCase() ||
+            c.city_name_ar === city
+        );
+
+        if (!isValidCity) {
+            throw new ValidationError("Invalid city for the selected governorate", [
+                {
+                    field: "city",
+                    message: `Must be a valid city in ${validGovernorate.governorate_name_en}`
+                }
+            ]);
         }
     }
 }

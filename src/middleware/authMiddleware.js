@@ -42,7 +42,7 @@ const authMiddleware = async (req, res, next) => {
           delete userData.hashedPassword;
           delete userData.confirmationToken;
           delete userData.otp;
-          userRole = role;
+          userRole = role;    
           break;
         }
       }
