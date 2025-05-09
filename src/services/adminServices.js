@@ -1,21 +1,43 @@
+const { 
+    NotFoundError, 
+    ValidationError, 
+    DatabaseError, 
+    ConflictError,
+    BadRequestError,
+    ForbiddenError
+} = require('../utils/baseException');
+const mongoose = require('mongoose');
+
 class AdminService {
     constructor(models) {
         this.models = models;
     }
 
     async getAllUsers() {
-        const users = await this.models.customer.find({}).select('-hashedPassword -confirmationToken -otp');
-        return users;
+        try {
+            const users = await this.models.customer.find({}).select('-hashedPassword -confirmationToken -otp');
+            return users;
+        } catch (error) {
+            throw new DatabaseError(error.message);
+        }
     }
 
     async getAllDelivery() {
-        const delivery = await this.models.delivery.find({}).select('-hashedPassword -confirmationToken -otp');
-        return delivery;
+        try {
+            const delivery = await this.models.delivery.find({}).select('-hashedPassword -confirmationToken -otp');
+            return delivery;
+        } catch (error) {
+            throw new DatabaseError(error.message);
+        }
     }
 
     async getAllCustomerService() {
-        const customerService = await this.models['customer service'].find({}).select('-hashedPassword -confirmationToken -otp');
-        return customerService;
+        try {
+            const customerService = await this.models['customer service'].find({}).select('-hashedPassword -confirmationToken -otp');
+            return customerService;
+        } catch (error) {
+            throw new DatabaseError(error.message);
+        }
     }
 
     async deleteUser(userId) {
@@ -37,7 +59,7 @@ class AdminService {
                 }
 
                 if (!user) {
-                    throw new Error('User not found');
+                    throw new NotFoundError('User not found');
                 }
 
                 // Handle role-specific cascading deletions
@@ -87,26 +109,38 @@ class AdminService {
 
             return { message: 'User deleted successfully with all associated data' };
         } catch (error) {
-            throw error;
+            if (error instanceof NotFoundError) {
+                throw error;
+            }
+            throw new DatabaseError(error.message);
         } finally {
             session.endSession();
         }
     }
 
     async updateUserStatus(userId, status) {
-        for (const key in this.models) {
-            try {
-                const user = await this.models[key].findById(userId);
-                if (user) {
-                    user.confirmed = status;
-                    await user.save();
-                    return { message: 'Status updated successfully' };
+        try {
+            for (const key in this.models) {
+                if (key === 'product' || key === 'order') continue;
+                
+                try {
+                    const user = await this.models[key].findById(userId);
+                    if (user) {
+                        user.confirmed = status;
+                        await user.save();
+                        return { message: 'Status updated successfully' };
+                    }
+                } catch (error) {
+                    continue;
                 }
-            } catch (error) {
-                continue;
             }
+            throw new NotFoundError('User not found');
+        } catch (error) {
+            if (error instanceof NotFoundError) {
+                throw error;
+            }
+            throw new DatabaseError(error.message);
         }
-        throw new Error('User not found');
     }
 
     async addProduct(productData) {
@@ -115,18 +149,25 @@ class AdminService {
             const requiredFields = ['name', 'price', 'description', 'category', 'vendor', 'stock'];
             for (const field of requiredFields) {
                 if (!productData[field]) {
-                    throw new Error(`${field} is required`);
+                    throw new ValidationError(`${field} is required`);
                 }
             }
 
             // Validate price and stock are positive numbers
-            if (productData.price <= 0) throw new Error('Price must be greater than 0');
-            if (productData.stock < 0) throw new Error('Stock cannot be negative');
+            if (productData.price <= 0) {
+                throw new ValidationError('Price must be greater than 0');
+            }
+            if (productData.stock < 0) {
+                throw new ValidationError('Stock cannot be negative');
+            }
 
             const newProduct = await this.models.product.create(productData);
             return newProduct;
         } catch (error) {
-            throw new Error('Failed to add product: ' + error.message);
+            if (error instanceof ValidationError) {
+                throw error;
+            }
+            throw new DatabaseError(`Failed to add product: ${error.message}`);
         }
     }
 
@@ -137,7 +178,7 @@ class AdminService {
                 // First check if product exists
                 const product = await this.models.product.findById(productId).session(session);
                 if (!product) {
-                    throw new Error('Product not found');
+                    throw new NotFoundError('Product not found');
                 }
 
                 // Remove product from all users' carts
@@ -153,7 +194,10 @@ class AdminService {
 
             return { message: 'Product deleted successfully and removed from all carts' };
         } catch (error) {
-            throw new Error(error.message);
+            if (error instanceof NotFoundError) {
+                throw error;
+            }
+            throw new DatabaseError(error.message);
         } finally {
             session.endSession();
         }
@@ -165,7 +209,7 @@ class AdminService {
             await session.withTransaction(async () => {
                 const product = await this.models.product.findById(productId).session(session);
                 if (!product) {
-                    throw new Error('Product not found');
+                    throw new NotFoundError('Product not found');
                 }
 
                 // Update basic product details
@@ -189,95 +233,116 @@ class AdminService {
             const updatedProduct = await this.models.product.findById(productId);
             return updatedProduct;
         } catch (error) {
-            throw new Error(`Failed to update product: ${error.message}`);
+            if (error instanceof NotFoundError) {
+                throw error;
+            }
+            throw new DatabaseError(`Failed to update product: ${error.message}`);
         } finally {
             session.endSession();
         }
     }
 
     async getAllUsersWithRoles() {
-        const users = await this.models.customer.find({}).select('-hashedPassword -confirmationToken -otp').lean();
-        const delivery = await this.models.delivery.find({}).select('-hashedPassword -confirmationToken -otp').lean();
-        const customerService = await this.models['customer service'].find({}).select('-hashedPassword -confirmationToken -otp').lean();
-        const admins = await this.models.admin.find({}).select('-hashedPassword -confirmationToken -otp').lean();
+        try {
+            const users = await this.models.customer.find({}).select('-hashedPassword -confirmationToken -otp').lean();
+            const delivery = await this.models.delivery.find({}).select('-hashedPassword -confirmationToken -otp').lean();
+            const customerService = await this.models['customer service'].find({}).select('-hashedPassword -confirmationToken -otp').lean();
+            const admins = await this.models.admin.find({}).select('-hashedPassword -confirmationToken -otp').lean();
 
-        const usersWithRole = [
-            ...users.map(u => ({ ...u, role: 'customer' })),
-            ...delivery.map(u => ({ ...u, role: 'delivery' })),
-            ...customerService.map(u => ({ ...u, role: 'customer service' })),
-            ...admins.map(u => ({ ...u, role: 'admin' }))
-        ];
-        return usersWithRole;
+            const usersWithRole = [
+                ...users.map(u => ({ ...u, role: 'customer' })),
+                ...delivery.map(u => ({ ...u, role: 'delivery' })),
+                ...customerService.map(u => ({ ...u, role: 'customer service' })),
+                ...admins.map(u => ({ ...u, role: 'admin' }))
+            ];
+            return usersWithRole;
+        } catch (error) {
+            throw new DatabaseError(error.message);
+        }
     }
 
     async updateUserRole(userId, newRole) {
-        let currentRole = null;
-        let userData = null;
-        
-        for (const [role, model] of Object.entries(this.models)) {
-            if (role === 'product' || role === 'order') continue;
-            
-            const user = await model.findById(userId);
-            if (user) {
-                currentRole = role;
-                userData = user;
-                break;
-            }
-        }
-
-        if (!userData) {
-            throw new Error('User not found');
-        }
-
-        if (currentRole === newRole) {
-            throw new Error('User already has this role');
-        }
-
-        const userDataForNewRole = {
-            firstName: userData.firstName,
-            lastName: userData.lastName,
-            email: userData.email,
-            phone: userData.phone,
-            hashedPassword: userData.hashedPassword,
-            confirmed: userData.confirmed
-        };
-
-        if (newRole === 'delivery') {
-            userDataForNewRole.orders = [];
-            userDataForNewRole.zone = '';
-        } else if (newRole === 'customer') {
-            userDataForNewRole.cart = { items: [] };
-            userDataForNewRole.address = {};
-        } else if (newRole === 'customer service') {
-            userDataForNewRole.complaints = [];
-        }
-
-        const session = await this.models[currentRole].startSession();
         try {
-            await session.withTransaction(async () => {
-                const newUser = await this.models[newRole].create([userDataForNewRole], { session });
-
-                if (currentRole === 'customer' && userData.cart?.items?.length > 0) {
-                    console.log(`User ${userId} had items in cart during role change`);
+            let currentRole = null;
+            let userData = null;
+            
+            for (const [role, model] of Object.entries(this.models)) {
+                if (role === 'product' || role === 'order') continue;
+                
+                const user = await model.findById(userId);
+                if (user) {
+                    currentRole = role;
+                    userData = user;
+                    break;
                 }
+            }
 
-                if (currentRole === 'delivery' && userData.orders?.length > 0) {
-                    const orderIds = userData.orders.map(o => o.orderId);
-                    await this.models.order.updateMany(
-                        { orderId: { $in: orderIds } },
-                        { $set: { deliveryId: '' } },
-                        { session }
-                    );
-                }
+            if (!userData) {
+                throw new NotFoundError('User not found');
+            }
 
-                await this.models[currentRole].findByIdAndDelete(userId, { session });
-            });
+            // Prevent changing an admin's role to something else
+            if (currentRole === 'admin') {
+                throw new ForbiddenError('Admin users cannot be changed to another role');
+            }
 
-            return { message: 'User role updated successfully' };
+            if (currentRole === newRole) {
+                throw new ConflictError('User already has this role');
+            }
+
+            const userDataForNewRole = {
+                firstName: userData.firstName,
+                lastName: userData.lastName,
+                email: userData.email,
+                phone: userData.phone,
+                hashedPassword: userData.hashedPassword,
+                confirmed: userData.confirmed
+            };
+
+            if (newRole === 'delivery') {
+                userDataForNewRole.orders = [];
+                userDataForNewRole.zone = '';
+            } else if (newRole === 'customer') {
+                userDataForNewRole.cart = { items: [] };
+                userDataForNewRole.address = {};
+            } else if (newRole === 'customer service') {
+                userDataForNewRole.complaints = [];
+            } else if (newRole === 'admin') {
+                // Admin doesn't need any special fields
+            }
+
+            const session = await this.models[currentRole].startSession();
+            try {
+                await session.withTransaction(async () => {
+                    const newUser = await this.models[newRole].create([userDataForNewRole], { session });
+
+                    if (currentRole === 'customer' && userData.cart?.items?.length > 0) {
+                        console.log(`User ${userId} had items in cart during role change`);
+                    }
+
+                    if (currentRole === 'delivery' && userData.orders?.length > 0) {
+                        const orderIds = userData.orders.map(o => o.orderId);
+                        await this.models.order.updateMany(
+                            { orderId: { $in: orderIds } },
+                            { $set: { deliveryId: '' } },
+                            { session }
+                        );
+                    }
+
+                    await this.models[currentRole].findByIdAndDelete(userId, { session });
+                });
+
+                return { message: 'User role updated successfully' };
+            } catch (error) {
+                throw new DatabaseError(`Failed to update user role: ${error.message}`);
+            } finally {
+                session.endSession();
+            }
         } catch (error) {
-            throw new Error(`Failed to update user role: ${error.message}`);
-        } finally {
-            session.endSession();
+            if (error instanceof NotFoundError || error instanceof ConflictError || error instanceof ForbiddenError) {
+                throw error;
+            }
+            throw new DatabaseError(`Failed to update user role: ${error.message}`);
         }
     }
 }

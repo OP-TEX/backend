@@ -1,109 +1,107 @@
 const mongoose = require('mongoose');
 const { uploadImage } = require('../lib/cloudinary');
+const { 
+    ForbiddenError, 
+    NotFoundError, 
+    ValidationError, 
+    BadRequestError
+} = require('../utils/baseException');
 
 class AdminController {
     constructor(adminService) {
         this.adminService = adminService;
     }
 
-    async getAllUsers(req, res) {
+    async getAllUsers(req, res, next) {
         try {
             if (req.user.role !== 'admin') {
-                return res.status(403).json({ error: 'Not authorized' });
+                throw new ForbiddenError('Admin access required');
             }
             const users = await this.adminService.getAllUsers();
             res.status(200).json(users);
         } catch (error) {
-            res.status(400).json({ error: error.message });
+            next(error);
         }
     }
 
-    async getAllUsersWithRoles(req, res) {
+    async getAllUsersWithRoles(req, res, next) {
         try {
             if (req.user.role !== 'admin') {
-                return res.status(403).json({ error: 'Not authorized' });
+                throw new ForbiddenError('Admin access required');
             }
             const users = await this.adminService.getAllUsersWithRoles();
             res.status(200).json(users);
         } catch (error) {
-            res.status(400).json({ error: error.message });
+            next(error);
         }
     }
 
-    async getAllDelivery(req, res) {
+    async getAllDelivery(req, res, next) {
         try {
             if (req.user.role !== 'admin') {
-                return res.status(403).json({ error: 'Not authorized' });
+                throw new ForbiddenError('Admin access required');
             }
             const delivery = await this.adminService.getAllDelivery();
             res.status(200).json(delivery);
         } catch (error) {
-            res.status(400).json({ error: error.message });
+            next(error);
         }
     }
 
-    async getAllCustomerService(req, res) {
+    async getAllCustomerService(req, res, next) {
         try {
             if (req.user.role !== 'admin') {
-                return res.status(403).json({ error: 'Not authorized' });
+                throw new ForbiddenError('Admin access required');
             }
             const customerService = await this.adminService.getAllCustomerService();
             res.status(200).json(customerService);
         } catch (error) {
-            res.status(400).json({ error: error.message });
+            next(error);
         }
     }
 
-    async deleteUser(req, res) {
+    async deleteUser(req, res, next) {
         try {
             if (req.user.role !== 'admin') {
-                return res.status(403).json({ error: 'Not authorized' });
+                throw new ForbiddenError('Admin access required');
             }
 
             const { id } = req.params;
             
             if (!id) {
-                return res.status(400).json({ error: 'User ID is required' });
+                throw new BadRequestError('User ID is required');
             }
 
             // Validate MongoDB ObjectId
             if (!mongoose.Types.ObjectId.isValid(id)) {
-                return res.status(400).json({ error: 'Invalid user ID format' });
+                throw new BadRequestError('Invalid user ID format');
             }
 
-            try {
-                const result = await this.adminService.deleteUser(id);
-                res.status(200).json(result);
-            } catch (error) {
-                if (error.message === 'User not found') {
-                    return res.status(404).json({ error: 'User not found' });
-                }
-                throw error;
-            }
+            const result = await this.adminService.deleteUser(id);
+            res.status(200).json(result);
         } catch (error) {
-            res.status(400).json({ error: error.message });
+            next(error);
         }
     }
 
-    async updateUserStatus(req, res) {
+    async updateUserStatus(req, res, next) {
         try {
             if (req.user.role !== 'admin') {
-                return res.status(403).json({ error: 'Not authorized' });
+                throw new ForbiddenError('Admin access required');
             }
             const { id } = req.params;
             const { status } = req.body;
             const result = await this.adminService.updateUserStatus(id, status);
             res.status(200).json(result);
         } catch (error) {
-            res.status(400).json({ error: error.message });
+            next(error);
         }
     }
 
-    async addProduct(req, res) {
+    async addProduct(req, res, next) {
         try {
-
             if (req.user.role !== 'admin') {
-                return res.status(403).json({ error: 'Not authorized' });
+                throw new ForbiddenError('Admin access required');
             }
 
             const { name, price, description, category, vendor, stock } = req.body;
@@ -115,9 +113,7 @@ class AdminController {
                 const maxSize = 2 * 1024 * 1024;
                 for (const image of images) {
                     if (image.size > maxSize) {
-                        return res.status(400).json({ 
-                            error: `Image ${image.name} exceeds the 2MB size limit`
-                        });
+                        throw new BadRequestError(`Image ${image.name} exceeds the 2MB size limit`);
                     }
                     
                     const imageUrl = await uploadImage(image.tempFilePath);
@@ -138,84 +134,77 @@ class AdminController {
             const product = await this.adminService.addProduct(productData);
             res.status(201).json(product);
         } catch (error) {
-            res.status(400).json({ error: error.message });
+            next(error);
         }
     }
 
-    async deleteProduct(req, res) {
+    async deleteProduct(req, res, next) {
         try {
             if (req.user.role !== 'admin') {
-                return res.status(403).json({ error: 'Not authorized' });
+                throw new ForbiddenError('Admin access required');
             }
             
             const { id } = req.params;
             if (!id) {
-                return res.status(400).json({ error: 'Product ID is required' });
+                throw new BadRequestError('Product ID is required');
             }
 
             // Validate if the id is a valid MongoDB ObjectId
             if (!mongoose.Types.ObjectId.isValid(id)) {
-                return res.status(400).json({ error: 'Invalid product ID format' });
+                throw new BadRequestError('Invalid product ID format');
             }
             
-            try {
-                const result = await this.adminService.deleteProduct(id);
-                res.status(200).json(result);
-            } catch (error) {
-                if (error.message === 'Product not found') {
-                    return res.status(404).json({ error: 'Product not found' });
-                }
-                throw error;
-            }
+            const result = await this.adminService.deleteProduct(id);
+            res.status(200).json(result);
         } catch (error) {
-            res.status(400).json({ error: error.message });
+            next(error);
         }
     }
 
-    async updateUserRole(req, res) {
+    async updateUserRole(req, res, next) {
         try {
             if (req.user.role !== 'admin') {
-                return res.status(403).json({ error: 'Not authorized' });
+                throw new ForbiddenError('Admin access required');
             }
-
+    
             const { id } = req.params;
             const { role } = req.body;
-
+    
             if (!id) {
-                return res.status(400).json({ error: 'User ID is required' });
+                throw new BadRequestError('User ID is required');
             }
-
+    
             if (!role) {
-                return res.status(400).json({ error: 'New role is required' });
+                throw new BadRequestError('New role is required');
             }
-
-            // Validate role
-            const validRoles = ['customer', 'delivery', 'customer service'];
+    
+            // Validate role - add 'admin' to valid roles
+            const validRoles = ['customer', 'delivery', 'customer service', 'admin'];
             if (!validRoles.includes(role)) {
-                return res.status(400).json({ error: 'Invalid role' });
+                throw new BadRequestError('Invalid role');
             }
-
+    
             // Validate MongoDB ObjectId
             if (!mongoose.Types.ObjectId.isValid(id)) {
-                return res.status(400).json({ error: 'Invalid user ID format' });
+                throw new BadRequestError('Invalid user ID format');
             }
-
+    
             const result = await this.adminService.updateUserRole(id, role);
             res.status(200).json(result);
         } catch (error) {
-            res.status(400).json({ error: error.message });
+            next(error);
         }
     }
 
-    async updateProduct(req, res) {
+    async updateProduct(req, res, next) {
         try {
             if (req.user.role !== 'admin') {
-                return res.status(403).json({ error: 'Not authorized' });
+                throw new ForbiddenError('Admin access required');
             }
 
             const { id } = req.params;
             if (!id || !mongoose.Types.ObjectId.isValid(id)) {
-                return res.status(400).json({ error: 'Valid product ID is required' });
+                throw new BadRequestError('Valid product ID is required');
             }
 
             const { name, price, description, category, vendor, stock, existingImages } = req.body;
@@ -228,9 +217,7 @@ class AdminController {
                 const maxSize = 2 * 1024 * 1024; // 2MB
                 for (const image of images) {
                     if (image.size > maxSize) {
-                        return res.status(400).json({ 
-                            error: `Image ${image.name} exceeds the 2MB size limit`
-                        });
+                        throw new BadRequestError(`Image ${image.name} exceeds the 2MB size limit`);
                     }
                     
                     const imageUrl = await uploadImage(image.tempFilePath);
@@ -252,7 +239,7 @@ class AdminController {
             const updatedProduct = await this.adminService.updateProduct(id, productData);
             res.status(200).json(updatedProduct);
         } catch (error) {
-            res.status(400).json({ error: error.message });
+            next(error);
         }
     }
 }
