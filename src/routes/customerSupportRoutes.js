@@ -29,10 +29,10 @@ module.exports = (customerSupportController) => {
     // Service rep routes
     router.get('/assigned', serviceOrAdmin, (req, res, next) => customerSupportController.getServiceComplaints(req, res, next));
     router.put('/resolve/:complaintId', serviceOrAdmin, (req, res, next) => customerSupportController.resolveComplaint(req, res, next));
-    
+
     // Add REST endpoint for sending chat messages (as alternative to sockets)
     router.post('/chat/:complaintId/messages', (req, res, next) => customerSupportController.sendChatMessage(req, res, next));
-    
+
     // Add REST endpoint for updating online status
     router.put('/status', serviceOnly, (req, res, next) => customerSupportController.updateOnlineStatus(req, res, next));
 

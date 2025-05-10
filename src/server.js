@@ -8,7 +8,7 @@ require('dotenv').config();
 
 const http = require('http');
 const setupSockets = require('./lib/socket');
-const setupCustomerSupportSockets = require('./lib/customerSupportSockets');
+const setupCustomerSupportSockets = require('./lib/socket');
 const authRoutes = require('./routes/authRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const productRoutes = require('./routes/productRoutes');
@@ -16,11 +16,11 @@ const orderRoutes = require('./routes/orderRoutes');
 const userRoutes = require('./routes/userRoutes');
 const customerSupportRoutes = require('./routes/customerSupportRoutes');
 const { getAIResponse } = require('./lib/ai');
-const { 
-  authController, 
-  adminController, 
-  productController, 
-  orderController, 
+const {
+  authController,
+  adminController,
+  productController,
+  orderController,
   userController,
   customerSupportController,
   customerSupportService

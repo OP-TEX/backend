@@ -114,7 +114,7 @@ const setupSockets = (server, customerSupportService) => {
 
                     // Join complaint room
                     socket.join(`complaint-${complaintId}`);
-
+                    
                     socket.emit('chat-history', messages);
 
                     // Notify others user joined
