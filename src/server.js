@@ -7,8 +7,7 @@ const path = require('path');
 require('dotenv').config();
 
 const http = require('http');
-const setupSockets = require('./lib/socket');
-const setupCustomerSupportSockets = require('./lib/socket');
+const setupSocketIO = require('./lib/socket');
 const authRoutes = require('./routes/authRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const productRoutes = require('./routes/productRoutes');
@@ -75,9 +74,8 @@ app.post('/ai-trial', authmiddleware, async (req, res, next) => {
 // Error handling middleware
 app.use(exceptionHandler);
 
-// Set up sockets
-const io = setupSockets(server);
-setupCustomerSupportSockets(server, customerSupportService);
+// Set up sockets - fix redundant import and initialization
+setupSocketIO(server, customerSupportService);
 
 // Start the server
 const PORT = process.env.PORT || 3000;

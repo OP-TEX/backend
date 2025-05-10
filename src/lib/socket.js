@@ -3,7 +3,13 @@ const jwt = require('jsonwebtoken');
 
 // Socket setup function
 const setupSockets = (server, customerSupportService) => {
-    const io = socketIO(server);
+    const io = socketIO(server, {
+        cors: {
+            origin: "*",  // For development; restrict in production
+            methods: ["GET", "POST"],
+            credentials: true
+        }
+    });
 
     // Authentication middleware for sockets
     io.use(async (socket, next) => {
@@ -19,6 +25,21 @@ const setupSockets = (server, customerSupportService) => {
         } catch (error) {
             next(new Error('Authentication error'));
         }
+    });
+
+    // Root namespace for general connections
+    io.on('connection', (socket) => {
+        console.log('Client connected to root namespace:', socket.id);
+        
+        // Basic echo functionality for testing
+        socket.on('message', (data) => {
+            console.log('Received message:', data);
+            socket.emit('message', `Echo: ${data}`);
+        });
+        
+        socket.on('disconnect', () => {
+            console.log('Client disconnected from root namespace:', socket.id);
+        });
     });
 
     // Request socket - for customer service request queue
