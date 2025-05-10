@@ -1,5 +1,5 @@
-const mangoose = require('mongoose');
-const { Schema } = mangoose;
+const mongoose = require('mongoose');
+const { Schema } = mongoose;
 
 const ComplaintSchema = new Schema({
     orderId: { type: String, required: true },
@@ -15,5 +15,5 @@ const ComplaintSchema = new Schema({
     updatedAt: { type: Date, default: Date.now }
 });
 
-const Complaint = mangoose.model('Complaint', ComplaintSchema);
+const Complaint = mongoose.model('Complaint', ComplaintSchema);
 module.exports = Complaint;
