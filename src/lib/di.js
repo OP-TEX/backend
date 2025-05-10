@@ -5,6 +5,9 @@ const CustomerServiceModel = require('../models/customerServiceModel');
 const AdminModel = require('../models/adminModel');
 const ProductModel = require('../models/productModel');
 const OrderModel = require('../models/orderModel');
+const ComplaintModel = require('../models/complaintModel');
+const MessageModel = require('../models/messageModel');
+const ServiceResponseModel = require('../models/responseModel');
 const AuthService = require('../services/authServices');
 const AuthController = require('../controllers/authControllers');
 const AdminService = require('../services/adminServices');
@@ -15,6 +18,8 @@ const OrderService = require('../services/orderServices');
 const OrderController = require('../controllers/orderControllers');
 const UserService = require('../services/userServices');
 const UserController = require('../controllers/userControllers');
+const CustomerSupportService = require('../services/customerServiceServices');
+const CustomerSupportController = require('../controllers/customerServiceControllers');
 
 // Connect to MongoDB
 connectDB();
@@ -23,10 +28,13 @@ connectDB();
 const models = {
   customer: UserModel,
   delivery: DeliveryManModel,
-  'customer service': CustomerServiceModel,
+  customerService: CustomerServiceModel,
   admin: AdminModel,
   product: ProductModel,
   order: OrderModel,
+  complaint: ComplaintModel,
+  message: MessageModel,
+  serviceResponse: ServiceResponseModel,
 };
 
 // Create instances
@@ -41,13 +49,19 @@ const productController = new ProductController(productService);
 
 const orderService = new OrderService(models);
 const orderController = new OrderController(orderService);
+
 const userService = new UserService(models);
 const userController = new UserController(userService);
 
-module.exports = { 
-  authController, 
+const customerSupportService = new CustomerSupportService(models);
+const customerSupportController = new CustomerSupportController(customerSupportService);
+
+module.exports = {
+  authController,
   adminController,
   productController,
   orderController,
-  userController
+  userController,
+  customerSupportController,
+  customerSupportService // Export service for direct use in sockets
 };
