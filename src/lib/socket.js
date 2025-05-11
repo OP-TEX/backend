@@ -50,6 +50,7 @@ const setupSockets = (server, customerSupportService) => {
 
         // If customer service rep, update online status
         if (socket.user.role === 'customer service') {
+            console.log(`Service rep online: ${socket.user._id}`);
             await customerSupportService.updateServiceOnlineStatus(
                 socket.user._id,
                 true,

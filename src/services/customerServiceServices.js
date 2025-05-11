@@ -81,11 +81,12 @@ class CustomerSupportService {
             // Check if there are any available agents
             const onlineReps = await this.models.customerService.find({ isOnline: true });
             if (onlineReps.length === 0) {
+                console.log('No available agents, adding to queue');
                 // If no agents are available, add the complaint to the queue
                 this.customerQueue.push(complaintId);
                 return null;
             }
-
+            console.log('Available agents found, assigning complaint ' + onlineReps.length);
             // Get today's start timestamp
             const todayStart = moment().startOf('day').toDate();
 
