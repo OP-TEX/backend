@@ -11,8 +11,8 @@ const setupSockets = (server, customerSupportService) => {
         }
     });
 
-    // Authentication middleware for sockets
-    io.use(async (socket, next) => {
+    // Extract authentication middleware to a reusable function
+    const authMiddleware = async (socket, next) => {
         try {
             const token = socket.handshake.auth.token;
             if (!token) {
@@ -25,18 +25,20 @@ const setupSockets = (server, customerSupportService) => {
         } catch (error) {
             next(new Error('Authentication error'));
         }
-    });
+    };
+    // Apply auth middleware to main namespace
+    io.use(authMiddleware);
 
     // Root namespace for general connections
     io.on('connection', (socket) => {
         console.log('Client connected to root namespace:', socket.id);
-        
+
         // Basic echo functionality for testing
         socket.on('message', (data) => {
             console.log('Received message:', data);
             socket.emit('message', `Echo: ${data}`);
         });
-        
+
         socket.on('disconnect', () => {
             console.log('Client disconnected from root namespace:', socket.id);
         });
@@ -44,6 +46,9 @@ const setupSockets = (server, customerSupportService) => {
 
     // Request socket - for customer service request queue
     const requestIO = io.of('/support-requests');
+
+    requestIO.use(authMiddleware);
+
 
     requestIO.on('connection', async (socket) => {
         console.log(`User connected to support requests: ${socket.user._id}`);
@@ -136,7 +141,7 @@ const setupSockets = (server, customerSupportService) => {
 
                     // Join complaint room
                     socket.join(`complaint-${complaintId}`);
-                    
+
                     socket.emit('chat-history', messages);
 
                     // Notify others user joined
