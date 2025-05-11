@@ -334,6 +334,43 @@ class OrderService {
         }
     }
 
+    async handlePaymentFailure(orderId) {
+        const session = await mongoose.startSession();
+        try {
+          let updatedOrder;
+          
+          await session.withTransaction(async () => {
+            // Find the order
+            const order = await this.models.order.findOne({ orderId }).session(session);
+            if (!order) {
+              throw new NotFoundError('Order not found', 'ORDER_NOT_FOUND');
+            }
+            
+            // Return items to stock
+            for (const item of order.products) {
+              await this.models.product.findByIdAndUpdate(
+                item.productId,
+                { $inc: { stock: item.quantity } }, // Increase stock by the ordered quantity
+                { session }
+              );
+            }
+            
+            // Update order status to Cancelled
+            order.status = 'Cancelled';
+            updatedOrder = await order.save({ session });
+          });
+          
+          return updatedOrder;
+        } catch (error) {
+          if (error instanceof NotFoundError) {
+            throw error;
+          }
+          throw new DatabaseError(`Error handling payment failure: ${error.message}`);
+        } finally {
+          session.endSession();
+        }
+      }
+
 }
 
 module.exports = OrderService;
