@@ -4,6 +4,7 @@ const {
     DatabaseError,
     BadRequestError
 } = require('../utils/baseException');
+const citiesData = require('../utils/cities.json').pop().data;
 
 class OrderService {
 
@@ -51,23 +52,61 @@ class OrderService {
                     quantity: item.quantity
                 };
             });
-            // Find delivery men in the same zone (zone === city or zone === gover)  
+            // Get customer's city and governorate
             const city = orderData.address.city;
             const gover = orderData.address.Gover;
-            const deliveryMen = await this.models.delivery.find({ $or: [{ zone: city }, { zone: gover }] });
+
+            // First try to find delivery personnel who cover this city
+            let deliveryMen = await this.models.delivery.find({ cities: city });
+            
+            // If no delivery people found for specific city, try to find any who serve this governorate
+            if (deliveryMen.length === 0) {
+                // Load cities data to find all cities in this governorate
+                const governoratesData = require('../utils/governorates.json');
+                
+                // Find the governorate ID
+                const governorate = governoratesData.find(g => 
+                    g.governorate_name_en === gover || g.governorate_name_ar === gover
+                );
+                
+                if (governorate) {
+                    const governorateId = governorate.id;
+                    
+                    // Get all cities in this governorate
+                    const citiesInGovernorate = citiesData
+                        .filter(c => c.governorate_id === governorateId)
+                        .map(c => c.city_name_en);
+                    
+                    // Find delivery people who serve any city in this governorate
+                    for (const deliveryMan of await this.models.delivery.find()) {
+                        // Check if any of the delivery person's cities are in this governorate
+                        const hasMatchingCity = deliveryMan.cities.some(deliveryCity => 
+                            citiesInGovernorate.includes(deliveryCity)
+                        );
+                        
+                        if (hasMatchingCity) {
+                            deliveryMen.push(deliveryMan);
+                        }
+                    }
+                }
+            }
+
             let assignedDeliveryMan = null;
             let status = 'Pending';
             let deliveryId = '';
 
+            // Assign to delivery person with fewest active orders
             if (deliveryMen.length > 0) {
                 let minOrders = Infinity;
                 for (const man of deliveryMen) {
-                    const activeOrders = man.orders.filter(o => o.status === 'Confirmed' || o.status === 'Out for Delivery').length;
+                    const activeOrders = man.orders.filter(o => 
+                        o.status === 'Confirmed' || o.status === 'Out for Delivery').length;
                     if (activeOrders < minOrders) {
                         minOrders = activeOrders;
                         assignedDeliveryMan = man;
                     }
                 }
+                
                 if (assignedDeliveryMan) {
                     status = 'Confirmed';
                     deliveryId = assignedDeliveryMan._id.toString();
@@ -241,6 +280,57 @@ class OrderService {
             return orders;
         } catch (error) {
             throw new DatabaseError(`Error fetching orders by status: ${error.message}`);
+        }
+    }
+
+    async updateDeliveryCities(deliveryId, cities) {
+        try {
+            
+            // Allow empty array to clear cities
+            if (Array.isArray(cities) && cities.length === 0) {
+              // Update with empty array
+              const updatedDelivery = await this.models.delivery.findByIdAndUpdate(
+                  deliveryId,
+                  { $set: { cities: [] } },
+                  { new: true }
+                );
+                
+                if (!updatedDelivery) {
+                throw new NotFoundError('Delivery account not found');
+            }
+            
+            return { cities: updatedDelivery.cities };
+        }
+        
+        console.log(citiesData);
+        const validCityNames = citiesData.map(c => c.city_name_en);
+        
+        const invalidCities = cities.filter(city => !validCityNames.includes(city));
+        if (invalidCities.length > 0) {
+              throw new ValidationError(`Invalid cities: ${invalidCities.join(', ')}`, 
+              invalidCities.map(city => ({
+                  field: 'cities',
+                  message: `${city} is not a valid city name`
+                }))
+            );
+        }
+        
+        const updatedDelivery = await this.models.delivery.findByIdAndUpdate(
+            deliveryId,
+            { $set: { cities: cities } },
+            { new: true }
+        );
+        
+        if (!updatedDelivery) {
+              throw new NotFoundError('Delivery account not found');
+            }
+            
+            return { cities: updatedDelivery.cities };
+        } catch (error) {
+            if (error instanceof NotFoundError || error instanceof ValidationError) {
+              throw error;
+            }
+          throw new DatabaseError(`Error updating cities: ${error.message}`);
         }
     }
 

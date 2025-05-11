@@ -1,4 +1,4 @@
-const { NotFoundError } = require('../utils/baseException');
+const { NotFoundError,BadRequestError } = require('../utils/baseException');
 
 class OrderController {
     constructor(orderService) {
@@ -119,6 +119,25 @@ class OrderController {
             next(error);
         }
     };
+
+    // Update delivery cities list
+    // PUT /api/orders/update-cities
+    // req.body = { cities: ["City1", "City2", ...] }
+    updateDeliveryCities = async (req, res, next) => {
+        try {
+            const { cities } = req.body;
+            
+            if (!cities || !Array.isArray(cities)) {
+                throw new BadRequestError('Cities must be provided as an array');
+            }
+            
+            const deliveryId = req.user._id;
+            const result = await this.orderService.updateDeliveryCities(deliveryId, cities);
+            res.json({ success: true, message: "Cities updated successfully", cities: result.cities });
+        } catch (error) {
+          next(error);
+        }
+      };
 }
 
 module.exports = OrderController;

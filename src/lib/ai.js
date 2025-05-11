@@ -11,7 +11,7 @@ const apiKeys = [
 
 async function getAIResponse(prompt) {
   const payload = {
-    model: "google/gemini-2.5-pro-exp-03-25:free",
+    model: "google/gemini-2.0-flash-exp:free",
     messages: [{ role: "user", content: prompt }],
   };
   

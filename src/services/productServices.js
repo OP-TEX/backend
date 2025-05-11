@@ -5,6 +5,7 @@ const {
   ServerError, 
   ValidationError 
 } = require('../utils/baseException');
+const { getAIResponse } = require('../lib/ai');
 
 class ProductService {
   constructor(models) {
@@ -93,6 +94,15 @@ class ProductService {
   async getBestSellers() {
     const { getBestSellers } = require('../lib/bestSellers');
     return getBestSellers();
+  }
+
+  async getAIResponse(message) {
+    try {
+      return await getAIResponse(message);
+    } catch (error) {
+      console.error('Error getting AI response:', error);
+      throw new ServerError("Error communicating with AI service");
+    }
   }
 
   async getFeaturedProducts(user) {

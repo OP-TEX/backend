@@ -38,20 +38,20 @@ app.use('/api/products', productRoutes(productController));
 app.use('/api/orders', orderRoutes(orderController));
 app.use('/api/user', userRoutes);
 
-app.post('/ai-trial', authmiddleware, async (req, res, next) => {
-  try {
-    console.log(req.user);
-    const { message, device } = req.body;
-    console.log(device);
-    let modifiedMessage = message + ` in ${device} \n if the question i asked you doesn't concern the device ${device} please answer with out of scope`;
+// app.post('/ai-trial', authmiddleware, async (req, res, next) => {
+//   try {
+//     console.log(req.user);
+//     const { message, device } = req.body;
+//     console.log(device);
+//     let modifiedMessage = message + ` in ${device} \n if the question i asked you doesn't concern the device ${device} please answer with out of scope`;
 
-    const response = await getAIResponse(modifiedMessage);
-    console.log(response);
-    res.send({ message: response });
-  } catch (error) {
-    next(error);
-  }
-});
+//     const response = await getAIResponse(modifiedMessage);
+//     console.log(response);
+//     res.send({ message: response });
+//   } catch (error) {
+//     next(error);
+//   }
+// });
 
 // Error handling middleware - should be after all routes
 app.use(exceptionHandler);

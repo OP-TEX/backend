@@ -18,7 +18,7 @@ const DeliveryManSchema = new Schema({
     }],
     default: []
   },
-  zone: { type: String, default: "" }
+  cities: { type: [String], default: [] } // Replace zone with array of cities
 });
 
 const DeliveryMan = mongoose.model('DeliveryMan', DeliveryManSchema);
