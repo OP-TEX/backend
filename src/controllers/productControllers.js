@@ -37,6 +37,24 @@ class ProductController {
       next(new ServerError('Error fetching featured products'));
     }
   };
+
+  chatWithAi = async (req, res, next) => {
+    try {
+      const { message, device } = req.body;
+      if (!message || !device) {
+        return next(new BadRequestError('Message and device are required', 'MISSING_FIELDS'));
+      }
+      
+      
+      let modifiedMessage = message + ` in ${device} \n if the question i asked you doesn't concern the device ${device} please answer with out of scope and also if the question is not related to the device ${device} please answer with out of scope and also if the question is about the price or avilability of the ${device} please answer with out of scope`;
+      
+      const response = await this.productService.getAIResponse(modifiedMessage);
+      res.json({ message: response });
+    } catch (error) {
+      next(new ServerError('Error communicating with AI'));
+    }
+  };
+
 }
 
 module.exports = ProductController;

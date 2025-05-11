@@ -301,7 +301,7 @@ class AdminService {
 
             if (newRole === 'delivery') {
                 userDataForNewRole.orders = [];
-                userDataForNewRole.zone = '';
+                userDataForNewRole.cities = [];
             } else if (newRole === 'customer') {
                 userDataForNewRole.cart = { items: [] };
                 userDataForNewRole.address = {};

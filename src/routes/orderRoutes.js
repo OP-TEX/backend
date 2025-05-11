@@ -48,8 +48,17 @@ module.exports = (orderController) => {
   // Get a single order by its orderId
   router.get('/:orderId', (req, res, next) => orderController.getOrderById(req, res, next));
   
+  // Update delivery man's cities (delivery role only)
+  router.patch('/update-cities', (req, res, next) => {
+    if (req.user.role !== 'delivery') {
+      return next(new ForbiddenError('Delivery access required'));
+    }
+    orderController.updateDeliveryCities(req, res, next);
+  });
+
   // Update order status (admin or delivery role)
   router.put('/:orderId', deliveryOrAdmin, (req, res, next) => orderController.updateOrderStatus(req, res, next));
+
 
   return router;
 };

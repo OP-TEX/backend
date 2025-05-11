@@ -13,6 +13,7 @@ module.exports = (productController) => {
   router.get('/', asyncHandler((req, res, next) => productController.getAllProducts(req, res, next)));
   router.get('/best-sellers', asyncHandler((req, res, next) => productController.getBestSellers(req, res, next)));
   router.get('/featured-products', asyncHandler((req, res, next) => productController.getFeaturedProducts(req, res, next)));
+  router.post('/ai' , asyncHandler((req, res, next) => productController.chatWithAi(req, res, next)));
 
   return router;
 };
