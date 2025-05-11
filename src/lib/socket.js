@@ -11,21 +11,35 @@ const setupSockets = (server, customerSupportService) => {
         }
     });
 
-    // Extract authentication middleware to a reusable function
+    // Improved authentication middleware for sockets
     const authMiddleware = async (socket, next) => {
         try {
-            const token = socket.handshake.auth.token;
+            // Check multiple possible token locations
+            const token = socket.handshake.auth?.token ||
+                socket.handshake.headers?.authorization?.replace('Bearer ', '') ||
+                socket.handshake.query?.token;
+
             if (!token) {
-                return next(new Error('Authentication error'));
+                console.error('Socket auth failed: No token provided');
+                return next(new Error('Authentication token required'));
             }
 
-            const decoded = jwt.verify(token, process.env.JWT_SECRET);
-            socket.user = decoded;
-            next();
+            try {
+                // Verify the token
+                const decoded = jwt.verify(token, process.env.JWT_SECRET);
+                socket.user = decoded;
+                console.log(`Socket authenticated: ${decoded._id}`);
+                next();
+            } catch (jwtError) {
+                console.error('Socket auth failed: Invalid token', jwtError.message);
+                return next(new Error('Invalid authentication token'));
+            }
         } catch (error) {
+            console.error('Socket auth error:', error.message);
             next(new Error('Authentication error'));
         }
     };
+
     // Apply auth middleware to main namespace
     io.use(authMiddleware);
 
@@ -51,24 +65,37 @@ const setupSockets = (server, customerSupportService) => {
 
 
     requestIO.on('connection', async (socket) => {
-        console.log(`User connected to support requests: ${socket.user._id}`);
+        try {
+            // Safety check to ensure socket.user exists
+            if (!socket.user || !socket.user._id) {
+                console.error('Missing user data in socket connection');
+                socket.disconnect(true);
+                return;
+            }
 
-        // If customer service rep, update online status
-        if (socket.user.role === 'customer service') {
-            console.log(`Service rep online: ${socket.user._id}`);
-            await customerSupportService.updateServiceOnlineStatus(
-                socket.user._id,
-                true,
-                socket.id
-            );
+            console.log(`User connected to support requests: ${socket.user._id}`);
 
-            // Notify admin about status change
-            requestIO.to('admin-room').emit('service-status-change', {
-                serviceId: socket.user._id,
-                isOnline: true
-            });
+            // If customer service rep, update online status
+            if (socket.user.role === 'customer service') {
+                console.log(`Service rep online: ${socket.user._id}`);
+                await customerSupportService.updateServiceOnlineStatus(
+                    socket.user._id,
+                    true,
+                    socket.id
+                );
+
+                // Notify admin about status change
+                requestIO.to('admin-room').emit('service-status-change', {
+                    serviceId: socket.user._id,
+                    isOnline: true
+                });
+            }
+
+            // Rest of your connection handler code...
+        } catch (error) {
+            console.error('Error in support-requests connection:', error);
+            socket.emit('error', { message: 'Connection error' });
         }
-
         // Join rooms based on role
         if (socket.user.role === 'admin') {
             socket.join('admin-room');
