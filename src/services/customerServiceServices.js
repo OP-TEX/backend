@@ -48,6 +48,10 @@ class CustomerSupportService {
                 status: 'pending',
             });
 
+            complaint.save();
+
+
+
             //try ti assign to available agent
             await this.assignComplaintToAvailableAgent(complaint._id);
 
