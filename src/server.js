@@ -6,14 +6,29 @@ const { exceptionHandler } = require('./middleware/errorHandlerMiddleware');
 const path = require('path');
 require('dotenv').config();
 
+const http = require('http');
+const setupSocketIO = require('./lib/socket');
 const authRoutes = require('./routes/authRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const productRoutes = require('./routes/productRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const userRoutes = require('./routes/userRoutes');
+const customerSupportRoutes = require('./routes/customerSupportRoutes');
 const { getAIResponse } = require('./lib/ai');
-const { authController, adminController, productController, orderController } = require('./lib/di');
+const {
+  authController,
+  adminController,
+  productController,
+  orderController,
+  userController,
+  customerSupportController,
+  customerSupportService
+} = require('./lib/di');
+
 const app = express();
+
+// Create HTTP server
+const server = http.createServer(app);
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -32,11 +47,13 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'views', 'welcome.html'));
 });
 
+// Set up API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/products', productRoutes(productController));
 app.use('/api/orders', orderRoutes(orderController));
 app.use('/api/user', userRoutes);
+app.use('/api/support', customerSupportRoutes(customerSupportController));
 
 // app.post('/ai-trial', authmiddleware, async (req, res, next) => {
 //   try {
@@ -53,11 +70,29 @@ app.use('/api/user', userRoutes);
 //   }
 // });
 
-// Error handling middleware - should be after all routes
+
+// Error handling middleware
 app.use(exceptionHandler);
 
+// Set up sockets - fix redundant import and initialization
+setupSocketIO(server, customerSupportService);
+
+// Start the server
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, async () => {
-  await connectDB();
-  console.log(`Server is running on port ${PORT}`);
-});
+
+// Initialize MongoDB connection before starting the server
+connectDB()
+  .then(() => {
+    console.log('MongoDB connected successfully');
+    // Start the server only after DB connection is established
+    server.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+  })
+  .catch(err => {
+    console.error('MongoDB connection error:', err);
+    process.exit(1); // Exit with failure
+  });
+
+// For testing
+module.exports = app;

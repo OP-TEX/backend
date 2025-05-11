@@ -33,7 +33,7 @@ class AdminService {
 
     async getAllCustomerService() {
         try {
-            const customerService = await this.models['customer service'].find({}).select('-hashedPassword -confirmationToken -otp');
+            const customerService = await this.models.customerService.find({}).select('-hashedPassword -confirmationToken -otp');
             return customerService;
         } catch (error) {
             throw new DatabaseError(error.message);
@@ -246,7 +246,7 @@ class AdminService {
         try {
             const users = await this.models.customer.find({}).select('-hashedPassword -confirmationToken -otp').lean();
             const delivery = await this.models.delivery.find({}).select('-hashedPassword -confirmationToken -otp').lean();
-            const customerService = await this.models['customer service'].find({}).select('-hashedPassword -confirmationToken -otp').lean();
+            const customerService = await this.models.customerService.find({}).select('-hashedPassword -confirmationToken -otp').lean();
             const admins = await this.models.admin.find({}).select('-hashedPassword -confirmationToken -otp').lean();
 
             const usersWithRole = [
