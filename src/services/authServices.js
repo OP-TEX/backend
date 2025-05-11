@@ -283,7 +283,7 @@ class AuthService {
     let role = "User";
     if (Model === this.models.delivery) {
       role = "Delivery";
-    } else if (Model === this.models.customerService) {
+    } else if (Model === this.models['customer service']) {
       role = "CustomerService";
     }
   

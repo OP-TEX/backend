@@ -2,8 +2,9 @@ const { NotFoundError,BadRequestError } = require('../utils/baseException');
 const { createPaymentIntent, verifyPaymentStatus } = require('../lib/stripe');
 
 class OrderController {
-    constructor(orderService) {
+    constructor(orderService , models) {
         this.orderService = orderService;
+        this.models = models;
     }
 
     // Create a new order
@@ -153,7 +154,9 @@ class OrderController {
             const order = await this.orderService.getOrderById(orderId);
             
             // Verify order belongs to user and is in pending status
-            if (order.userId !== userId) {
+            console.log(order.userId, userId);
+            if (order.userId.toString() !== userId.toString()) {
+                console.log("i did eneter here");
                 throw new BadRequestError('Cannot pay for someone else\'s order');
             }
             
@@ -166,9 +169,13 @@ class OrderController {
             }
             
             // Get user email for receipt
+            console.log(userId.toString());
+            console.log(2);
             const user = await this.models.customer.findById(userId);
+            console.log(1);
             
             // Create the payment intent
+            // console.log();
             const paymentIntent = await createPaymentIntent(
                 order.totalPrice,
                 order.orderId,
