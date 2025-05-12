@@ -195,7 +195,7 @@ class OrderController {
     confirmPayment = async (req, res, next) => {
         try {
           const { orderId, paymentIntentId } = req.body;
-          
+          console.log(orderId, paymentIntentId);
           if (!orderId || !paymentIntentId) {
             throw new BadRequestError('Order ID and Payment Intent ID are required');
           }

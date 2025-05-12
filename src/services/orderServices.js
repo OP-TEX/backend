@@ -5,7 +5,9 @@ const {
     BadRequestError
 } = require('../utils/baseException');
 const citiesData = require('../utils/cities.json').pop().data;
-
+const mongoose = require('mongoose');
+const ObjectId = mongoose.Types.ObjectId;
+ 
 class OrderService {
 
     constructor(models) {
@@ -231,12 +233,19 @@ class OrderService {
                     message: `Status must be one of: ${validStatuses.join(', ')}`
                 }]);
             }
+            
+            console.log(orderId, status);
+            
+            // Convert string ID to ObjectId before querying
 
+            
             const updatedOrder = await this.models.order.findOneAndUpdate(
-                { _id : orderId },
+                { _id: new ObjectId(orderId) },
                 { status },
                 { new: true }
             );
+            
+            console.log(updatedOrder);
             if (!updatedOrder) {
                 throw new NotFoundError('Order not found', 'ORDER_NOT_FOUND');
             }
