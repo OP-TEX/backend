@@ -7,7 +7,7 @@ const apiKeys = [
 
 async function getAIResponse(prompt) {
   const payload = {
-    model: "deepseek/deepseek-r1:free",
+    model: "meta-llama/llama-4-maverick:free",
     messages: [{ role: "user", content: prompt }],
   };
   
