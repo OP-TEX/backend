@@ -234,21 +234,33 @@ class OrderService {
                 }]);
             }
             
-            console.log(orderId, status);
+            if (!orderId) {
+                throw new ValidationError('Order ID is required', [{
+                    field: 'orderId',
+                    message: 'Order ID is required'
+                }]);
+            }
             
-            // Convert string ID to ObjectId before querying
-
+            let query = {};
+            
+            // Check if it's a valid ObjectId
+            if (mongoose.Types.ObjectId.isValid(orderId)) {
+                query = { _id: new ObjectId(orderId) };
+            } else {
+                // Try string orderId
+                query = { orderId: orderId };
+            }
             
             const updatedOrder = await this.models.order.findOneAndUpdate(
-                { _id: new ObjectId(orderId) },
+                query,
                 { status },
                 { new: true }
             );
             
-            console.log(updatedOrder);
             if (!updatedOrder) {
                 throw new NotFoundError('Order not found', 'ORDER_NOT_FOUND');
             }
+            
             return updatedOrder;
         } catch (error) {
             if (error instanceof NotFoundError || error instanceof ValidationError) {

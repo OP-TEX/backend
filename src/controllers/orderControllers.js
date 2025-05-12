@@ -53,8 +53,12 @@ class OrderController {
     getOrderById = async (req, res, next) => {
         try {
             const { orderId } = req.params;
+            
+            if (!orderId) {
+                throw new BadRequestError('Order ID is required');
+            }
+            
             const order = await this.orderService.getOrderById(orderId);
-            // No need for manual check since service now throws NotFoundError
             res.json({ success: true, order });
         } catch (error) {
             next(error);
@@ -79,6 +83,15 @@ class OrderController {
         try {
             const { orderId } = req.params;
             const { status } = req.body;
+            
+            if (!orderId) {
+                throw new BadRequestError('Order ID is required');
+            }
+            
+            if (!status) {
+                throw new BadRequestError('Status is required');
+            }
+            
             const order = await this.orderService.updateOrderStatus(orderId, status);
             res.json({ success: true, order });
         } catch (error) {
