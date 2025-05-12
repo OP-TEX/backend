@@ -5,6 +5,8 @@ const {
     BadRequestError
 } = require('../utils/baseException');
 const citiesData = require('../utils/cities.json').pop().data;
+const mongoose = require('mongoose');
+const ObjectId = mongoose.Types.ObjectId;
 
 class OrderService {
 
@@ -222,7 +224,7 @@ class OrderService {
         }
     }
 
-    async updateOrderStatus(orderId, status) {
+       async updateOrderStatus(orderId, status) {
         try {
             const validStatuses = ['Confirmed', 'Out for Delivery', 'Delivered', 'Cancelled'];
             if (!validStatuses.includes(status)) {
@@ -231,12 +233,19 @@ class OrderService {
                     message: `Status must be one of: ${validStatuses.join(', ')}`
                 }]);
             }
+            
+            console.log(orderId, status);
+            
+            // Convert string ID to ObjectId before querying
 
+            
             const updatedOrder = await this.models.order.findOneAndUpdate(
-                { _id : orderId },
+                { _id: new ObjectId(orderId) },
                 { status },
                 { new: true }
             );
+            
+            console.log(updatedOrder);
             if (!updatedOrder) {
                 throw new NotFoundError('Order not found', 'ORDER_NOT_FOUND');
             }
@@ -248,7 +257,6 @@ class OrderService {
             throw new DatabaseError(`Error updating order status: ${error.message}`);
         }
     }
-
     async getOrderStats() {
         try {
             const totalOrders = await this.models.order.countDocuments();
