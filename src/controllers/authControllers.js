@@ -121,7 +121,7 @@ class AuthController {
           throw new MethodNotAllowedError("Method not allowed", "METHOD_NOT_ALLOWED");
         }
 
-        const { email, password } = req.body;
+        const { email, password , role } = req.body;
         
         if (!email) {
           throw new BadRequestError("Email is required", "EMAIL_REQUIRED");
@@ -130,8 +130,12 @@ class AuthController {
         if (!password) {
           throw new BadRequestError("Password is required", "PASSWORD_REQUIRED");
         }
+
+        if (!role) {
+          throw new BadRequestError("Role is required", "ROLE_REQUIRED");
+        }
         
-        const result = await this.authService.login({ email, password });
+        const result = await this.authService.login({ email, password , role });
         res.status(200).json(result);
       } catch (error) {
         next(error);

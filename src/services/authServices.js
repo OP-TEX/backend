@@ -160,10 +160,28 @@ class AuthService {
     };
   }
 
-  async login({ email, password }) {
+  async login({ email, password, role }) {
     const result = await this.getUserByEmail(email);
     if (!result) throw new AuthorizationError("Invalid email or password", "INVALID_CREDENTIALS");
-    const { user } = result;
+    const { user, Model } = result;
+    
+    // Check if the found user's role matches the requested role
+    // Find which model/role the user belongs to
+    let userRole = null;
+    for (const [key, model] of Object.entries(this.models)) {
+      if (model === Model) {
+        userRole = key;
+        break;
+      }
+    }
+    
+    // Normalize the roles for comparison
+    const normalizedRequestedRole = role.toLowerCase();
+    
+    // If roles don't match, throw the same error as invalid credentials
+    if (normalizedRequestedRole !== userRole) {
+      throw new AuthorizationError("Invalid email or password", "INVALID_CREDENTIALS");
+    }
     
     const isMatch = await bcrypt.compare(password, user.hashedPassword);
     if (!isMatch) throw new AuthorizationError("Invalid email or password", "INVALID_CREDENTIALS");
