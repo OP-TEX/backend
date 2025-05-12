@@ -164,7 +164,7 @@ class OrderController {
             }
 
             // Get the order
-            const order = await this.orderService.getOrderById({ _id: ObjectId(orderId) });
+            const order = await this.orderService.getOrderById({ _id: orderId });
 
             // Verify order belongs to user and is in pending status
             console.log(order.userId, userId);
