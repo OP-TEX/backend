@@ -46,7 +46,7 @@ class ProductController {
       }
       
       
-      let modifiedMessage = message + ` in ${device} \n if the question i asked you doesn't concern the device ${device} please answer with out of scope and also if the question is not related to the device ${device} please answer with out of scope and also if the question is about the price or avilability of the ${device} please answer with out of scope`;
+      let modifiedMessage = message;
       
       const response = await this.productService.getAIResponse(modifiedMessage);
       res.json({ message: response });
