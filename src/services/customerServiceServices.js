@@ -590,7 +590,7 @@ class CustomerSupportService {
             }
             console.log(serviceId)
             const serviceRep = await this.models.customerService.findByIdAndUpdate(
-                {serviceId : serviceId.toString() },
+                {_id : serviceId },
                 update,
                 { new: true }
             );
