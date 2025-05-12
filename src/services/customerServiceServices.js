@@ -580,33 +580,52 @@ class CustomerSupportService {
      */
     async updateServiceOnlineStatus(serviceId, isOnline, socketId = null) {
         try {
+            // Validate serviceId
+            if (!serviceId) {
+                throw new ValidationError('Service ID is required');
+            }
+    
+            // Check if models are properly initialized
+            if (!this.models || !this.models.customerService) {
+                throw new DatabaseError('Customer service model is not available');
+            }
+    
             const update = {
                 isOnline,
                 lastActiveAt: Date.now()
             };
-
+    
             if (socketId) {
                 update.socketId = socketId;
             }
-            console.log(serviceId)
-            const serviceRep = await this.models.customerServices.findByIdAndUpdate(
-                {_id : serviceId },
+    
+            // Validate that serviceId is a valid MongoDB ObjectId
+            if (!mongoose.Types.ObjectId.isValid(serviceId)) {
+                throw new ValidationError('Invalid service ID format');
+            }
+    
+            // Use the correct MongoDB ID format
+            const serviceRep = await this.models.customerService.findByIdAndUpdate(
+                serviceId, // No need for {_id: serviceId}, just pass the ID directly
                 update,
                 { new: true }
             );
-
+    
             if (!serviceRep) {
                 throw new NotFoundError('Service representative not found');
             }
-
+    
             // If coming online, process queue
             if (isOnline) {
                 await this.processQueue(serviceId);
             }
-
+    
             return serviceRep;
         } catch (error) {
-            if (error instanceof NotFoundError) {
+            // Log the detailed error for debugging
+            console.error(`Service online status update error for ID ${serviceId}:`, error);
+            
+            if (error instanceof NotFoundError || error instanceof ValidationError) {
                 throw error;
             }
             throw new DatabaseError(`Failed to update online status: ${error.message}`);
