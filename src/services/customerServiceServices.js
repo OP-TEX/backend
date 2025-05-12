@@ -588,7 +588,7 @@ class CustomerSupportService {
             if (socketId) {
                 update.socketId = socketId;
             }
-
+            console.log(serviceId)
             const serviceRep = await this.models.customerService.findByIdAndUpdate(
                 serviceId,
                 update,
