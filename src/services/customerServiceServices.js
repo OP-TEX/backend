@@ -619,7 +619,8 @@ class CustomerSupportService {
             if (isOnline) {
                 await this.processQueue(serviceId);
             }
-    
+            
+            // any
             return serviceRep;
         } catch (error) {
             // Log the detailed error for debugging
