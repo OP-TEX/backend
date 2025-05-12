@@ -97,7 +97,7 @@ class CustomerSupportService {
                 }
 
                 // Check if there are any available agents
-                const onlineReps = await this.models.customerService.find({ isOnline: true }).session(session);
+                const onlineReps = await this.models['customer service'].find({ isOnline: true }).session(session);
                 if (onlineReps.length === 0) {
                     console.log('No available agents, adding to queue');
                     // If no agents are available, add the complaint to the queue only if it's a live chat
@@ -185,7 +185,7 @@ class CustomerSupportService {
                     }
 
                     // Add to rep's active complaints
-                    await this.models.customerService.findByIdAndUpdate(
+                    await this.models['customer service'].findByIdAndUpdate(
                         selectedRep._id,
                         {
                             $push: {
@@ -279,7 +279,7 @@ class CustomerSupportService {
             }
 
             // First check if this rep already has a live chat complaint
-            const serviceRep = await this.models.customerService.findById(serviceId);
+            const serviceRep = await this.models['customer service'].findById(serviceId);
 
             // Get all active complaints for this rep that are live chats
             const activeComplaints = await this.models.complaint.find({
@@ -465,7 +465,7 @@ class CustomerSupportService {
             await complaint.save();
 
             // Remove from rep's active complaints
-            const serviceRep = await this.models.customerService.findById(serviceId);
+            const serviceRep = await this.models['customer service'].findById(serviceId);
             serviceRep.activeComplaints = serviceRep.activeComplaints.filter(
                 c => c.complaintId.toString() !== complaintId
             );
@@ -516,7 +516,7 @@ class CustomerSupportService {
 
             // If assigned to a service rep, remove from their active complaints
             if (complaint.assignedTo) {
-                const serviceRep = await this.models.customerService.findById(complaint.assignedTo);
+                const serviceRep = await this.models['customer service'].findById(complaint.assignedTo);
                 if (serviceRep) {
                     serviceRep.activeComplaints = serviceRep.activeComplaints.filter(
                         c => c.complaintId.toString() !== complaintId
