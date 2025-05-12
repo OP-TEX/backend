@@ -1,8 +1,8 @@
-const { NotFoundError,BadRequestError } = require('../utils/baseException');
+const { NotFoundError, BadRequestError } = require('../utils/baseException');
 const { createPaymentIntent, verifyPaymentStatus } = require('../lib/stripe');
 
 class OrderController {
-    constructor(orderService , models) {
+    constructor(orderService, models) {
         this.orderService = orderService;
         this.models = models;
     }
@@ -53,11 +53,11 @@ class OrderController {
     getOrderById = async (req, res, next) => {
         try {
             const { orderId } = req.params;
-            
+
             if (!orderId) {
                 throw new BadRequestError('Order ID is required');
             }
-            
+
             const order = await this.orderService.getOrderById(orderId);
             res.json({ success: true, order });
         } catch (error) {
@@ -83,15 +83,15 @@ class OrderController {
         try {
             const { orderId } = req.params;
             const { status } = req.body;
-            
+
             if (!orderId) {
                 throw new BadRequestError('Order ID is required');
             }
-            
+
             if (!status) {
                 throw new BadRequestError('Status is required');
             }
-            
+
             const order = await this.orderService.updateOrderStatus(orderId, status);
             res.json({ success: true, order });
         } catch (error) {
@@ -141,20 +141,20 @@ class OrderController {
     updateDeliveryCities = async (req, res, next) => {
         try {
             const { cities } = req.body;
-            
+
             if (!cities || !Array.isArray(cities)) {
                 throw new BadRequestError('Cities must be provided as an array');
             }
-            
+
             const deliveryId = req.user._id;
             const result = await this.orderService.updateDeliveryCities(deliveryId, cities);
             res.json({ success: true, message: "Cities updated successfully", cities: result.cities });
         } catch (error) {
-          next(error);
+            next(error);
         }
-      };
+    };
 
-      createPaymentIntent = async (req, res, next) => {
+    createPaymentIntent = async (req, res, next) => {
         try {
             const userId = req.user?._id;
             if (!userId) {
@@ -165,7 +165,7 @@ class OrderController {
             if (!orderId) {
                 throw new BadRequestError('Order ID is required');
             }
-            
+
             // Get the order
             const order = await this.orderService.getOrderById(orderId);
             if (!order) {
@@ -179,28 +179,29 @@ class OrderController {
             if (!orderUserId || orderUserId !== currentUserId) {
                 throw new BadRequestError('Cannot pay for someone else\'s order');
             }
-            
+
             if (order.status !== 'Pending') {
                 throw new BadRequestError('This order is not pending payment');
             }
-            
+
             if (order.payment_method !== 'prepaid') {
                 throw new BadRequestError('This order is not set for prepaid payment');
             }
-            
+
             // Get user email for receipt
             const user = await this.models.customer.findById(userId);
+
             if (!user || !user.email) {
                 throw new NotFoundError('User email not found');
             }
             
-            // Create the payment intent with imported function
+            
             const paymentIntent = await createPaymentIntent(
                 order.totalPrice,
                 order.orderId,
                 user.email
             );
-            
+
             res.status(200).json({
                 success: true,
                 clientSecret: paymentIntent.clientSecret,
@@ -210,44 +211,44 @@ class OrderController {
             next(error);
         }
     };
-    
+
     confirmPayment = async (req, res, next) => {
         try {
-          const { orderId, paymentIntentId } = req.body;
-          console.log(orderId, paymentIntentId);
-          if (!orderId || !paymentIntentId) {
-            throw new BadRequestError('Order ID and Payment Intent ID are required');
-          }
-          
-          // First, verify the payment status
-          const paymentStatus = await verifyPaymentStatus(paymentIntentId);
-          
-          if (paymentStatus.succeeded) {
-            // If payment succeeded, update order status and assign delivery
-            const order = await this.orderService.updateOrderStatus(orderId, 'Confirmed');
-            
-            // Try to assign a delivery person
-            await this.orderService.assignDeliveryToOrder(orderId, order.deliveryId || '');
-            
-            res.status(200).json({
-              success: true,
-              message: 'Payment confirmed and order processed',
-              order
-            });
-          } else {
-            // If payment failed, handle failure and return stock
-            const order = await this.orderService.handlePaymentFailure(orderId);
-            
-            res.status(200).json({
-              success: false,
-              message: 'Payment failed. Order has been cancelled.',
-              order
-            });
-          }
+            const { orderId, paymentIntentId } = req.body;
+            console.log(orderId, paymentIntentId);
+            if (!orderId || !paymentIntentId) {
+                throw new BadRequestError('Order ID and Payment Intent ID are required');
+            }
+
+            // First, verify the payment status
+            const paymentStatus = await verifyPaymentStatus(paymentIntentId);
+
+            if (paymentStatus.succeeded) {
+                // If payment succeeded, update order status and assign delivery
+                const order = await this.orderService.updateOrderStatus(orderId, 'Confirmed');
+
+                // Try to assign a delivery person
+                await this.orderService.assignDeliveryToOrder(orderId, order.deliveryId || '');
+
+                res.status(200).json({
+                    success: true,
+                    message: 'Payment confirmed and order processed',
+                    order
+                });
+            } else {
+                // If payment failed, handle failure and return stock
+                const order = await this.orderService.handlePaymentFailure(orderId);
+
+                res.status(200).json({
+                    success: false,
+                    message: 'Payment failed. Order has been cancelled.',
+                    order
+                });
+            }
         } catch (error) {
-          next(error);
+            next(error);
         }
-      };
+    };
 }
 
 module.exports = OrderController;

@@ -97,7 +97,7 @@ class CustomerSupportService {
                 }
 
                 // Check if there are any available agents
-                const onlineReps = await this.models.customerService.find({ isOnline: true }).session(session);
+                const onlineReps = await this.models['customer service'].find({ isOnline: true }).session(session);
                 if (onlineReps.length === 0) {
                     console.log('No available agents, adding to queue');
                     // If no agents are available, add the complaint to the queue only if it's a live chat
@@ -185,7 +185,7 @@ class CustomerSupportService {
                     }
 
                     // Add to rep's active complaints
-                    await this.models.customerService.findByIdAndUpdate(
+                    await this.models['customer service'].findByIdAndUpdate(
                         selectedRep._id,
                         {
                             $push: {
@@ -279,7 +279,7 @@ class CustomerSupportService {
             }
 
             // First check if this rep already has a live chat complaint
-            const serviceRep = await this.models.customerService.findById(serviceId);
+            const serviceRep = await this.models['customer service'].findById(serviceId);
 
             // Get all active complaints for this rep that are live chats
             const activeComplaints = await this.models.complaint.find({
@@ -465,7 +465,7 @@ class CustomerSupportService {
             await complaint.save();
 
             // Remove from rep's active complaints
-            const serviceRep = await this.models.customerService.findById(serviceId);
+            const serviceRep = await this.models['customer service'].findById(serviceId);
             serviceRep.activeComplaints = serviceRep.activeComplaints.filter(
                 c => c.complaintId.toString() !== complaintId
             );
@@ -516,7 +516,7 @@ class CustomerSupportService {
 
             // If assigned to a service rep, remove from their active complaints
             if (complaint.assignedTo) {
-                const serviceRep = await this.models.customerService.findById(complaint.assignedTo);
+                const serviceRep = await this.models['customer service'].findById(complaint.assignedTo);
                 if (serviceRep) {
                     serviceRep.activeComplaints = serviceRep.activeComplaints.filter(
                         c => c.complaintId.toString() !== complaintId
@@ -580,6 +580,13 @@ class CustomerSupportService {
      */
     async updateServiceOnlineStatus(serviceId, isOnline, socketId = null) {
         try {
+            // Validate serviceId
+            if (!serviceId) {
+                throw new ValidationError('Service ID is required');
+            }
+
+
+
             const update = {
                 isOnline,
                 lastActiveAt: Date.now()
@@ -589,8 +596,14 @@ class CustomerSupportService {
                 update.socketId = socketId;
             }
 
-            const serviceRep = await this.models.customerService.findByIdAndUpdate(
-                serviceId,
+            // Validate that serviceId is a valid MongoDB ObjectId
+            if (!mongoose.Types.ObjectId.isValid(serviceId)) {
+                throw new ValidationError('Invalid service ID format');
+            }
+
+            // Use the correct MongoDB ID format
+            const serviceRep = await this.models['customer service'].findByIdAndUpdate(
+                serviceId, // No need for {_id: serviceId}, just pass the ID directly
                 update,
                 { new: true }
             );
@@ -604,9 +617,13 @@ class CustomerSupportService {
                 await this.processQueue(serviceId);
             }
 
+            // any
             return serviceRep;
         } catch (error) {
-            if (error instanceof NotFoundError) {
+            // Log the detailed error for debugging
+            console.error(`Service online status update error for ID ${serviceId}:`, error);
+
+            if (error instanceof NotFoundError || error instanceof ValidationError) {
                 throw error;
             }
             throw new DatabaseError(`Failed to update online status: ${error.message}`);
