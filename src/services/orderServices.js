@@ -52,69 +52,74 @@ class OrderService {
                     quantity: item.quantity
                 };
             });
-            // Get customer's city and governorate
-            const city = orderData.address.city;
-            const gover = orderData.address.Gover;
-
-            // First try to find delivery personnel who cover this city
-            let deliveryMen = await this.models.delivery.find({ cities: city });
-            
-            // If no delivery people found for specific city, try to find any who serve this governorate
-            if (deliveryMen.length === 0) {
-                // Load cities data to find all cities in this governorate
-                const governoratesData = require('../utils/governorates.json');
-                
-                // Find the governorate ID
-                const governorate = governoratesData.find(g => 
-                    g.governorate_name_en === gover || g.governorate_name_ar === gover
-                );
-                
-                if (governorate) {
-                    const governorateId = governorate.id;
-                    
-                    // Get all cities in this governorate
-                    const citiesInGovernorate = citiesData
-                        .filter(c => c.governorate_id === governorateId)
-                        .map(c => c.city_name_en);
-                    
-                    // Find delivery people who serve any city in this governorate
-                    for (const deliveryMan of await this.models.delivery.find()) {
-                        // Check if any of the delivery person's cities are in this governorate
-                        const hasMatchingCity = deliveryMan.cities.some(deliveryCity => 
-                            citiesInGovernorate.includes(deliveryCity)
-                        );
-                        
-                        if (hasMatchingCity) {
-                            deliveryMen.push(deliveryMan);
-                        }
-                    }
-                }
-            }
-
+    
             let assignedDeliveryMan = null;
             let status = 'Pending';
             let deliveryId = '';
-
-            // Assign to delivery person with fewest active orders
-            if (deliveryMen.length > 0) {
-                let minOrders = Infinity;
-                for (const man of deliveryMen) {
-                    const activeOrders = man.orders.filter(o => 
-                        o.status === 'Confirmed' || o.status === 'Out for Delivery').length;
-                    if (activeOrders < minOrders) {
-                        minOrders = activeOrders;
-                        assignedDeliveryMan = man;
+    
+            // Only try to assign delivery for cash on delivery orders
+            if (orderData.payment_method === 'cash_on_delivery') {
+                // Get customer's city and governorate
+                const city = orderData.address.city;
+                const gover = orderData.address.Gover;
+    
+                // First try to find delivery personnel who cover this city
+                let deliveryMen = await this.models.delivery.find({ cities: city });
+                
+                // If no delivery people found for specific city, try to find any who serve this governorate
+                if (deliveryMen.length === 0) {
+                    // Load cities data to find all cities in this governorate
+                    const governoratesData = require('../utils/governorates.json');
+                    
+                    // Find the governorate ID
+                    const governorate = governoratesData.find(g => 
+                        g.governorate_name_en === gover || g.governorate_name_ar === gover
+                    );
+                    
+                    if (governorate) {
+                        const governorateId = governorate.id;
+                        
+                        // Get all cities in this governorate
+                        const citiesInGovernorate = citiesData
+                            .filter(c => c.governorate_id === governorateId)
+                            .map(c => c.city_name_en);
+                        
+                        // Find delivery people who serve any city in this governorate
+                        for (const deliveryMan of await this.models.delivery.find()) {
+                            // Check if any of the delivery person's cities are in this governorate
+                            const hasMatchingCity = deliveryMan.cities.some(deliveryCity => 
+                                citiesInGovernorate.includes(deliveryCity)
+                            );
+                            
+                            if (hasMatchingCity) {
+                                deliveryMen.push(deliveryMan);
+                            }
+                        }
                     }
                 }
-                
-                if (assignedDeliveryMan) {
-                    status = 'Confirmed';
-                    deliveryId = assignedDeliveryMan._id.toString();
+    
+                // Assign to delivery person with fewest active orders
+                if (deliveryMen.length > 0) {
+                    let minOrders = Infinity;
+                    for (const man of deliveryMen) {
+                        const activeOrders = man.orders.filter(o => 
+                            o.status === 'Confirmed' || o.status === 'Out for Delivery').length;
+                        if (activeOrders < minOrders) {
+                            minOrders = activeOrders;
+                            assignedDeliveryMan = man;
+                        }
+                    }
+                    
+                    if (assignedDeliveryMan) {
+                        status = 'Confirmed';
+                        deliveryId = assignedDeliveryMan._id.toString();
+                    }
                 }
             }
-
+            // For prepaid orders, just leave status as 'Pending' and don't assign delivery
+    
             const generatedOrderId = Date.now().toString() + Math.floor(Math.random() * 100).toString();
-
+    
             const order = await this.models.order.create({
                 orderId: generatedOrderId,
                 status,
@@ -125,14 +130,15 @@ class OrderService {
                 address: orderData.address,
                 payment_method: orderData.payment_method
             });
-
+    
             // Clear the user's cart after successful order creation
             await this.models.customer.findByIdAndUpdate(
                 userId,
                 { $set: { 'cart.items': [] } }
             );
-
-            if (assignedDeliveryMan) {
+    
+            // Only update delivery man's orders for cash on delivery
+            if (orderData.payment_method === 'cash_on_delivery' && assignedDeliveryMan) {
                 assignedDeliveryMan.orders.push({
                     orderId: generatedOrderId,
                     status: 'Confirmed',
@@ -140,6 +146,7 @@ class OrderService {
                 });
                 await assignedDeliveryMan.save();
             }
+            
             return order;
         } catch (error) {
             if (error instanceof NotFoundError) {
