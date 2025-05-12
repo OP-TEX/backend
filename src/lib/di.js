@@ -28,7 +28,7 @@ connectDB();
 const models = {
   customer: UserModel,
   delivery: DeliveryManModel,
-  customerService: CustomerServiceModel,
+  'customer service': CustomerServiceModel,
   admin: AdminModel,
   product: ProductModel,
   order: OrderModel,
@@ -48,7 +48,7 @@ const productService = new ProductService(models);
 const productController = new ProductController(productService);
 
 const orderService = new OrderService(models);
-const orderController = new OrderController(orderService);
+const orderController = new OrderController(orderService , models);
 
 const userService = new UserService(models);
 const userController = new UserController(userService);

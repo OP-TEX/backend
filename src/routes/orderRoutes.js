@@ -27,6 +27,12 @@ module.exports = (orderController) => {
   // Create a new order
   router.post('/', (req, res, next) => orderController.createOrder(req, res, next));
   
+  // Create payment intent for a specific order
+  router.post('/payment-intent', (req, res, next) => orderController.createPaymentIntent(req, res, next));
+
+  // Confirm payment for an order (client-side confirmation)
+  router.post('/confirm-payment', (req, res, next) => orderController.confirmPayment(req, res, next));
+
   // Get all orders for the authenticated user
   router.get('/my', (req, res, next) => orderController.getOrdersByUserId(req, res, next));
   
