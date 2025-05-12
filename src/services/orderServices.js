@@ -7,7 +7,7 @@ const {
 const citiesData = require('../utils/cities.json').pop().data;
 const mongoose = require('mongoose');
 const ObjectId = mongoose.Types.ObjectId;
-//  trying
+
 class OrderService {
 
     constructor(models) {
@@ -200,7 +200,8 @@ class OrderService {
 
     async getOrderById(orderId) {
         try {
-            const order = await this.models.order.findById(orderId);
+            // Change findById to findOne with orderId as the query parameter
+            const order = await this.models.order.findOne({ orderId });
             if (!order) {
                 throw new NotFoundError('Order not found', 'ORDER_NOT_FOUND');
             }
@@ -224,7 +225,7 @@ class OrderService {
         }
     }
 
-    async updateOrderStatus(orderId, status) {
+       async updateOrderStatus(orderId, status) {
         try {
             const validStatuses = ['Confirmed', 'Out for Delivery', 'Delivered', 'Cancelled'];
             if (!validStatuses.includes(status)) {
@@ -234,6 +235,7 @@ class OrderService {
                 }]);
             }
             
+
             if (!orderId) {
                 throw new ValidationError('Order ID is required', [{
                     field: 'orderId',
@@ -269,7 +271,6 @@ class OrderService {
             throw new DatabaseError(`Error updating order status: ${error.message}`);
         }
     }
-
     async getOrderStats() {
         try {
             const totalOrders = await this.models.order.countDocuments();
@@ -313,52 +314,52 @@ class OrderService {
 
     async updateDeliveryCities(deliveryId, cities) {
         try {
-            
+
             // Allow empty array to clear cities
             if (Array.isArray(cities) && cities.length === 0) {
-              // Update with empty array
-              const updatedDelivery = await this.models.delivery.findByIdAndUpdate(
-                  deliveryId,
-                  { $set: { cities: [] } },
-                  { new: true }
+                // Update with empty array
+                const updatedDelivery = await this.models.delivery.findByIdAndUpdate(
+                    deliveryId,
+                    { $set: { cities: [] } },
+                    { new: true }
                 );
-                
+
                 if (!updatedDelivery) {
+                    throw new NotFoundError('Delivery account not found');
+                }
+
+                return { cities: updatedDelivery.cities };
+            }
+
+            console.log(citiesData);
+            const validCityNames = citiesData.map(c => c.city_name_en);
+
+            const invalidCities = cities.filter(city => !validCityNames.includes(city));
+            if (invalidCities.length > 0) {
+                throw new ValidationError(`Invalid cities: ${invalidCities.join(', ')}`,
+                    invalidCities.map(city => ({
+                        field: 'cities',
+                        message: `${city} is not a valid city name`
+                    }))
+                );
+            }
+
+            const updatedDelivery = await this.models.delivery.findByIdAndUpdate(
+                deliveryId,
+                { $set: { cities: cities } },
+                { new: true }
+            );
+
+            if (!updatedDelivery) {
                 throw new NotFoundError('Delivery account not found');
             }
-            
-            return { cities: updatedDelivery.cities };
-        }
-        
-        console.log(citiesData);
-        const validCityNames = citiesData.map(c => c.city_name_en);
-        
-        const invalidCities = cities.filter(city => !validCityNames.includes(city));
-        if (invalidCities.length > 0) {
-              throw new ValidationError(`Invalid cities: ${invalidCities.join(', ')}`, 
-              invalidCities.map(city => ({
-                  field: 'cities',
-                  message: `${city} is not a valid city name`
-                }))
-            );
-        }
-        
-        const updatedDelivery = await this.models.delivery.findByIdAndUpdate(
-            deliveryId,
-            { $set: { cities: cities } },
-            { new: true }
-        );
-        
-        if (!updatedDelivery) {
-              throw new NotFoundError('Delivery account not found');
-            }
-            
+
             return { cities: updatedDelivery.cities };
         } catch (error) {
             if (error instanceof NotFoundError || error instanceof ValidationError) {
-              throw error;
+                throw error;
             }
-          throw new DatabaseError(`Error updating cities: ${error.message}`);
+            throw new DatabaseError(`Error updating cities: ${error.message}`);
         }
     }
 

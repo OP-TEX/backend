@@ -6,6 +6,7 @@ const ComplaintSchema = new Schema({
     userId: { type: String, required: true },
     subject: { type: String, required: true },
     description: { type: String, required: true },
+    requiresLiveChat: { type: Boolean, default: false },
     status: {
         type: String, enum: ['pending', 'assigned', 'in-progress', 'resolved', 'closed'],
         default: "pending"

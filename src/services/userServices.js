@@ -415,6 +415,18 @@ class UserService {
         }
     }
 
+    async getContactInfo(userId) {
+        try {
+            const user = await this.models.customer.findById(userId).select('firstName lastName email phone -_id');
+            if (!user) {
+                throw new NotFoundError("User not found", "USER_NOT_FOUND");
+            }
+            return user;
+        } catch (error) {
+            throw error;
+        }
+    }
+
     // Helper method to validate address data
     validateAddressData(addressData) {
         const requiredFields = ['street', 'city', 'Gover', 'building', 'floor', 'apartment'];

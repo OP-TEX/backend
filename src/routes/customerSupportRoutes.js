@@ -42,5 +42,22 @@ module.exports = (customerSupportController) => {
     // Admin and service rep reports
     router.get('/performance', serviceOrAdmin, (req, res, next) => customerSupportController.getPerformanceStats(req, res, next));
 
+    // Get live chat complaints
+    router.get('/complaints/live-chat', serviceOrAdmin, (req, res, next) => {
+        // Pass query parameter to filter by requiresLiveChat
+        req.query.requiresLiveChat = true;
+        customerSupportController.getServiceComplaints(req, res, next);
+    });
+
+    // Get regular complaints (non-live chat)
+    router.get('/complaints/regular', serviceOrAdmin, (req, res, next) => {
+        // Pass query parameter to filter by requiresLiveChat
+        req.query.requiresLiveChat = false;
+        customerSupportController.getServiceComplaints(req, res, next);
+    });
+
+    // Add endpoint for closing complaints (can be done by customer or service rep)
+    router.put('/close/:complaintId', (req, res, next) => customerSupportController.closeComplaint(req, res, next));
+
     return router;
 };
