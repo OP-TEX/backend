@@ -156,20 +156,27 @@ class OrderController {
 
       createPaymentIntent = async (req, res, next) => {
         try {
-            const userId = req.user._id;
-            const { orderId } = req.body;
+            const userId = req.user?._id;
+            if (!userId) {
+                throw new BadRequestError('User ID is required');
+            }
             
+            const { orderId } = req.body || {};
             if (!orderId) {
                 throw new BadRequestError('Order ID is required');
             }
             
             // Get the order
             const order = await this.orderService.getOrderById(orderId);
+            if (!order) {
+                throw new NotFoundError('Order not found');
+            }
             
             // Verify order belongs to user and is in pending status
-            console.log(order.userId, userId);
-            if (order.userId.toString() !== userId.toString()) {
-                console.log("i did eneter here");
+            const orderUserId = order.userId?.toString();
+            const currentUserId = userId.toString();
+            
+            if (!orderUserId || orderUserId !== currentUserId) {
                 throw new BadRequestError('Cannot pay for someone else\'s order');
             }
             
@@ -182,13 +189,12 @@ class OrderController {
             }
             
             // Get user email for receipt
-            console.log(userId.toString());
-            console.log(2);
             const user = await this.models.customer.findById(userId);
-            console.log(1);
+            if (!user || !user.email) {
+                throw new NotFoundError('User email not found');
+            }
             
-            // Create the payment intent
-            // console.log();
+            // Create the payment intent with imported function
             const paymentIntent = await createPaymentIntent(
                 order.totalPrice,
                 order.orderId,

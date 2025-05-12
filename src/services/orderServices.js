@@ -200,15 +200,34 @@ class OrderService {
 
     async getOrderById(orderId) {
         try {
-            // Change findById to findOne with orderId as the query parameter
-            const order = await this.models.order.findOne({ orderId });
+            // Validate input
+            if (!orderId) {
+                throw new ValidationError('Order ID is required', [{
+                    field: 'orderId',
+                    message: 'Order ID is required'
+                }]);
+            }
+            
+            let query = {};
+            
+            // Try to find by MongoDB ObjectId first if it's a valid ObjectId
+            if (mongoose.Types.ObjectId.isValid(orderId)) {
+                query = { _id: new ObjectId(orderId) };
+            } else {
+                // Try string orderId
+                query = { orderId: orderId };
+            }
+            
+            const order = await this.models.order.findOne(query);
+            
             if (!order) {
                 throw new NotFoundError('Order not found', 'ORDER_NOT_FOUND');
             }
+            
             return order;
         }
         catch (error) {
-            if (error instanceof NotFoundError) {
+            if (error instanceof NotFoundError || error instanceof ValidationError) {
                 throw error;
             }
             throw new DatabaseError(`Error fetching order: ${error.message}`);
