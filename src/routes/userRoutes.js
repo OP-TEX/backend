@@ -54,4 +54,9 @@ router.delete('/addresses/:addressId', authMiddleware, asyncHandler((req, res, n
     userController.deleteAddress(req, res, next)
 ));
 
+// Get contact info endpoint
+router.get('/contact/:userId', asyncHandler((req, res, next) =>
+    userController.getContactInfo(req, res, next)
+));
+
 module.exports = router;

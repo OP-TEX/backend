@@ -235,6 +235,25 @@ class UserController {
             next(error);
         }
     }
+
+    async getContactInfo(req, res, next) {
+        try {
+            if (req.method !== 'GET') {
+                throw new MethodNotAllowedError("Method not allowed", "METHOD_NOT_ALLOWED");
+            }
+
+            const { userId } = req.params;
+
+            if (!userId) {
+                throw new BadRequestError("User ID is required", "USER_ID_REQUIRED");
+            }
+
+            const result = await this.userService.getContactInfo(userId);
+            res.status(200).json(result);
+        } catch (error) {
+            next(error);
+        }
+    }
 }
 
 module.exports = UserController;

@@ -27,7 +27,7 @@ class CustomerSupportController {
                 throw new MethodNotAllowedError("Method not allowed", "METHOD_NOT_ALLOWED");
             }
 
-            const { orderId, subject, description } = req.body;
+            const { orderId, subject, description, requiresLiveChat } = req.body;
 
             if (!orderId) {
                 throw new BadRequestError("Order ID is required", "ORDER_ID_REQUIRED");
@@ -43,7 +43,12 @@ class CustomerSupportController {
 
             const complaint = await this.customerSupportService.createComplaint(
                 req.user._id,
-                { orderId, subject, description }
+                {
+                    orderId,
+                    subject,
+                    description,
+                    requiresLiveChat: requiresLiveChat || false
+                }
             );
 
             res.status(201).json({
@@ -82,8 +87,11 @@ class CustomerSupportController {
                 throw new ForbiddenError("Unauthorized access", "UNAUTHORIZED");
             }
 
-            // Use the service method instead of direct model access
-            const complaints = await this.customerSupportService.getServiceComplaints(req.user._id);
+            // Pass query parameters to allow filtering by requiresLiveChat
+            const complaints = await this.customerSupportService.getServiceComplaints(
+                req.user._id,
+                req.query
+            );
 
             res.status(200).json(complaints);
         } catch (error) {
@@ -170,6 +178,31 @@ class CustomerSupportController {
             const result = await this.customerSupportService.resolveComplaint(
                 complaintId,
                 req.user._id
+            );
+
+            res.status(200).json(result);
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // Close complaint
+    async closeComplaint(req, res, next) {
+        try {
+            if (req.method !== 'PUT') {
+                throw new MethodNotAllowedError("Method not allowed", "METHOD_NOT_ALLOWED");
+            }
+
+            const { complaintId } = req.params;
+
+            if (!complaintId) {
+                throw new BadRequestError("Complaint ID is required", "COMPLAINT_ID_REQUIRED");
+            }
+
+            const result = await this.customerSupportService.closeComplaint(
+                complaintId,
+                req.user._id,
+                req.user.role
             );
 
             res.status(200).json(result);

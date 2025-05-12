@@ -5,6 +5,7 @@ const fileUpload = require('express-fileupload');
 const { exceptionHandler } = require('./middleware/errorHandlerMiddleware');
 const path = require('path');
 require('dotenv').config();
+const cors = require('cors');
 
 const http = require('http');
 const setupSocketIO = require('./lib/socket');
@@ -29,6 +30,13 @@ const app = express();
 
 // Create HTTP server
 const server = http.createServer(app);
+
+// CORS configuration
+app.use(cors({
+  origin: ['http://localhost:56703', 'http://localhost:3000'], // Allow Flutter web app and optionally other origins
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+}));
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -74,9 +82,6 @@ app.use('/api/support', customerSupportRoutes(customerSupportController));
 // Error handling middleware
 app.use(exceptionHandler);
 
-// Set up sockets - fix redundant import and initialization
-setupSocketIO(server, customerSupportService);
-
 // Start the server
 const PORT = process.env.PORT || 3000;
 
@@ -84,6 +89,10 @@ const PORT = process.env.PORT || 3000;
 connectDB()
   .then(() => {
     console.log('MongoDB connected successfully');
+
+    // Set up sockets with the customerSupportService
+    const io = setupSocketIO(server, customerSupportService);
+
     // Start the server only after DB connection is established
     server.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);

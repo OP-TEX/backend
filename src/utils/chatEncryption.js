@@ -2,7 +2,8 @@ const crypto = require('crypto');
 const algorithm = 'aes-256-cbc';
 
 // Secret key should be in environment variables (32 bytes for AES-256)
-const SECRET_KEY = process.env.CHAT_ENCRYPTION_KEY || crypto.randomBytes(32).toString('hex');
+// IMPORTANT: Using a fixed fallback key for development - change in production!
+const SECRET_KEY = process.env.CHAT_ENCRYPTION_KEY || '67566B59703373367639792442264529482B4D6251655468576D5A7134743777';
 const IV_LENGTH = 16; // For AES, this is always 16 (because AES block size = 16 bytes) and should be random
 
 /**
@@ -14,41 +15,26 @@ const IV_LENGTH = 16; // For AES, this is always 16 (because AES block size = 16
  * @throws {Error} - Throws an error if encryption fails.
  */
 const encryptMessage = (message) => {
-    // Define a function called encryptMessage that takes a plaintext message as input
-
     try {
-        const iv = crypto.randomBytes(IV_LENGTH);
-        // Generate a random Initialization Vector (IV) of length IV_LENGTH bytes (16 bytes for AES)
-        // The IV adds randomness to ensure different ciphertexts for identical plaintexts
+        if (!message) {
+            return { encryptedContent: '', iv: '' };
+        }
 
+        const iv = crypto.randomBytes(IV_LENGTH);
         const cipher = crypto.createCipheriv(algorithm, Buffer.from(SECRET_KEY, 'hex'), iv);
-        // Create a Cipher object using the specified algorithm (like 'aes-256-cbc')
-        // The secret key (in hex format) is converted to a buffer
-        // The IV is passed to initialize the cipher properly
 
         let encrypted = cipher.update(message, 'utf8', 'hex');
-        // Encrypt the plaintext message
-        // Input encoding is 'utf8' (plaintext), output encoding is 'hex'
-        // This encrypts the main chunk of the message
-
         encrypted += cipher.final('hex');
-        // Finalize the encryption process and append any remaining encrypted bytes (in 'hex')
-        // Ensures all data is processed and encryption is complete
 
         return {
             encryptedContent: encrypted,
-            // Return an object containing the encrypted content as a hex string
-
             iv: iv.toString('hex')
-            // Also return the IV used for encryption (converted to hex string for storage/transmission)
         };
-
     } catch (error) {
         console.error('Encryption error:', error);
         throw new Error('Failed to encrypt message');
     }
 };
-
 
 /**
  * Decrypts an encrypted message using AES-256-CBC with the provided IV.
@@ -59,34 +45,25 @@ const encryptMessage = (message) => {
  * @throws {Error} - Throws an error if decryption fails.
  */
 const decryptMessage = (encryptedContent, iv) => {
-    // Define a function called decryptMessage that takes the encrypted content and IV as inputs
-
     try {
+        // Handle empty messages or missing encryption data
+        if (!encryptedContent || !iv) {
+            return '[Encrypted message unavailable]';
+        }
+
         const decipher = crypto.createDecipheriv(
             algorithm,
             Buffer.from(SECRET_KEY, 'hex'),
             Buffer.from(iv, 'hex')
         );
-        // Create a Decipher object using the same algorithm (aes-256-cbc)
-        // Convert the secret key from hex to a buffer
-        // Convert the IV from hex to a buffer
-        // These must exactly match what was used during encryption
 
         let decrypted = decipher.update(encryptedContent, 'hex', 'utf8');
-        // Decrypt the encrypted content
-        // Input encoding is 'hex' (because that's how it was stored)
-        // Output encoding is 'utf8' (to get back the plaintext)
-
         decrypted += decipher.final('utf8');
-        // Finalize the decryption and append any remaining decrypted bytes
-        // Ensures all encrypted data is fully processed
 
         return decrypted;
-        // Return the fully decrypted plaintext message
-
     } catch (error) {
-        console.error('Decryption error:', error);
-        throw new Error('Failed to decrypt message');
+        console.error('Decryption error:', error, 'for content with IV:', iv?.substring(0, 10) + '...');
+        return '[Could not decrypt message]';
     }
 };
 
