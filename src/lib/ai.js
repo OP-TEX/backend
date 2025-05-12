@@ -2,16 +2,12 @@ const axios = require("axios");
 require("dotenv").config();
 
 const apiKeys = [
-  process.env.OPENROUTER_API_KEY,
-  process.env.KEY2,
-  process.env.KEY3,
-  process.env.KEY4,
-  process.env.KEY5,
+  process.env.OPENROUTER_API_KEY
 ];
 
 async function getAIResponse(prompt) {
   const payload = {
-    model: "google/gemini-2.0-flash-exp:free",
+    model: "deepseek/deepseek-r1:free",
     messages: [{ role: "user", content: prompt }],
   };
   
