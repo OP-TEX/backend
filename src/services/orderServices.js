@@ -233,7 +233,7 @@ class OrderService {
             }
 
             const updatedOrder = await this.models.order.findOneAndUpdate(
-                { orderId },
+                { _id : orderId },
                 { status },
                 { new: true }
             );
